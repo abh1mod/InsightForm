@@ -4,27 +4,6 @@ import Form from "../models/form.model.js";
 import mongoose from "mongoose";
 const router = express.Router();
 
-router.post("/signup", async (req,res)=>{
-    try{
-        const {email, password, name} = req.body;
-        if(!email || !password || !name){
-            return res.status(400).send({success:false, message:"Please Provide all Fields"});
-        }
-        const userExists = await User.findOne({email : email});
-        if(userExists){
-            return res.status(400).json({success:false, message:"User Already Exists"});
-        }
-        const user = await User.create({name, email, password});
-        user.password = undefined;
-
-        res.status(201).send({user, message : "User Profile Created Successfully"});
-    }catch(error){
-        console.log(error);
-        res.status(500).send({success:false, message:"Internal Server Error"});
-    }
-});
-
-
 router.post("/forms", async (req, res) => {
     try{
         const{user_id, title, description, questions} = req.body;
@@ -71,5 +50,5 @@ router.post("/forms", async (req, res) => {
 
 });
 
-
 export default router;
+
