@@ -7,7 +7,7 @@ const opts = {
     // Tell Passport to extract the JWT from the 'Authorization: Bearer <token>' header
     jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
     // verify the incoming JWT using the public key
-    secretOrKey: process.env.PUB_KEY
+    secretOrKey: process.env.SECRET_KEY
 };
 
 passport.use(new JwtStrategy(opts, async (jwt_payload, done) => {
