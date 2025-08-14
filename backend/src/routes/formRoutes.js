@@ -2,7 +2,11 @@ import express from "express"
 import User from "../models/usermodel.js";
 import Form from "../models/form.model.js";
 import mongoose from "mongoose";
+import jwtAuthorisation from "../middleware/jwtAuthorisation.js";
 const router = express.Router();
+
+// middleware to verify JWT token and attach user to request. refer to ../middleware/jwtAuthorisation.js for implementation
+router.use(jwtAuthorisation);
 
 router.post("/forms", async (req, res) => {
     try{
@@ -49,6 +53,11 @@ router.post("/forms", async (req, res) => {
     }
 
 });
+
+router.get("/forms", async (req, res) => {
+    res.json({message:"This is the forms route"});
+});
+
 
 export default router;
 

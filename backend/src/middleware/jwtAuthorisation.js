@@ -1,6 +1,5 @@
 import passport from "passport";
-const JwtStrategy = require('passport-jwt').Strategy;
-const ExtractJwt = require('passport-jwt').ExtractJwt;
+import { Strategy as JwtStrategy, ExtractJwt } from 'passport-jwt';
 import User from "../models/usermodel.js";
 
 const opts = {
@@ -29,4 +28,30 @@ passport.use(new JwtStrategy(opts, async (jwt_payload, done) => {
     }
 }));
 
-export default jwtAuthorisation = passport.authenticate('jwt', { session: false });
+const jwtAuthorisation = (req, res, next) => {
+  // Use a custom callback to gain full control over the response
+  passport.authenticate('jwt', { session: false }, (err, user, info) => {
+    // 1. Handle any system-level errors
+    if (err) {
+      return next(err);
+    }
+
+    // 2. Handle authentication failure (no user found)
+    // This block runs if the token is missing, invalid, or expired.
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: 'invalid/expoired token',
+      });
+    }
+
+    // 3. Handle success
+    // If authentication is successful, attach the user to the request object
+    // and proceed to the next middleware or route handler.
+    req.user = user;
+    next();
+    
+  })(req, res, next);
+};
+
+export default jwtAuthorisation;
