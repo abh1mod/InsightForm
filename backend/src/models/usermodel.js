@@ -26,6 +26,7 @@ const userSchema = new mongoose.Schema({
     },
     googleId: {
         type: String,
+        index: true, // Create an index on the googleId field for faster lookups
         unique: true,
         sparse: true // Creates a unique index but allows multiple documents to have a null value
     }

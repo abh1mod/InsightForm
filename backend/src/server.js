@@ -1,3 +1,5 @@
+import dotenv from "dotenv";
+dotenv.config();
 import express, { json } from "express"
 import authRoutes from "./routes/authRoutes.js";
 import formRoutes from "./routes/formRoutes.js";
@@ -5,9 +7,8 @@ import responseRoutes from "./routes/responseRoutes.js";
 import reportRoutes from "./routes/reportRoutes.js";
 import cors from "cors";
 import {connectDB} from "./config/db.js";
-import dotenv from "dotenv"
 const app = express();
-dotenv.config();
+
 
 app.use(
   cors({
@@ -28,7 +29,7 @@ app.use("/api/report", reportRoutes);
 
 app.use((err, req, res, next) => {
     console.error(err.stack); // Log the error stack trace for debugging
-    res.status(500).json({ message: "Internal Server Error" }); // Send a generic error response
+    res.status(500).json({ sucess: false, message: "Internal Server Error" }); // Send a generic error response
 });
 
 const PORT = process.env.PORT || 3000;

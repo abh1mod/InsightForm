@@ -1,3 +1,5 @@
+import dotenv from "dotenv";
+dotenv.config();
 import express from "express"
 import User from "../models/usermodel.js";
 import mongoose from "mongoose";
@@ -6,8 +8,8 @@ import { Strategy as LocalStrategy } from "passport-local";
 import GoogleStrategy from "passport-google-oauth20";
 import isJWT from "jsonwebtoken";
 const router = express.Router();
-import dotenv from "dotenv";
-dotenv.config();
+import jwtAuthorisation, {blockIfLoggedIn} from "../middleware/jwtAuthorisation.js";
+
 
 router.use(express.json());
 router.use(express.urlencoded({ extended: true }));
@@ -16,8 +18,8 @@ router.use(express.urlencoded({ extended: true }));
 passport.use(new GoogleStrategy({
   clientID: process.env.GOOGLE_CLIENT_ID,
   clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-  callbackURL: '/redirect/google',
-}, async function verify(accessToken, refreshToken, profile, cb) {
+  callbackURL: 'http://localhost:3000/api/auth/redirect/google',
+}, async function verify(accessToken, refreshToken, profile, done) {
     try {
         console.log(profile);
         
@@ -28,6 +30,16 @@ passport.use(new GoogleStrategy({
         if (user) {
             return done(null, user);
         }
+         
+        // If user does not exist, check if a user with this email already exists
+        // This is to handle the case where a user has already previously signed up with email and password
+        // and is now trying to sign in with Google
+        let user1 = await User.findOne({ email: profile.emails[0].value });
+
+        if(user1) {
+            return done(null, user1)
+        }
+
 
         // 3. If user does not exist, create a new one
         const newUser = new User({
@@ -66,7 +78,7 @@ passport.use(new LocalStrategy(async function verify(username, password, cb) {
     }
 }));
 
-router.post("/signup", async (req,res, next)=>{
+router.post("/signup", blockIfLoggedIn, async (req,res, next)=>{
     try{
         const {email, password, name} = req.body;
         if(!email || !password || !name){
@@ -90,7 +102,7 @@ router.post("/signup", async (req,res, next)=>{
     }
 });
 
-router.post("/login", (req, res, next) => {
+router.post("/login", blockIfLoggedIn, (req, res, next) => {
     // Use Passport's local strategy to authenticate the user
     passport.authenticate("local", { session: false }, (err, user, info) =>{
         if(err) {
@@ -113,7 +125,7 @@ router.post("/login", (req, res, next) => {
 
 // frontend will redirect to this route to initiate Google authentication
 // This will redirect the user to Google's OAuth 2.0 server
-router.get('/google',
+router.get('/google', blockIfLoggedIn, 
   passport.authenticate('google', {
         scope: [ 'profile','email' ],
         session: false, // Disable session support
@@ -138,6 +150,10 @@ router.get('/redirect/google', (req, res, next) => {
             return next(error);
         }
     }) (req, res, next);
+});
+
+router.get('/me', jwtAuthorisation, (req, res) => {
+    return res.json({success: true});
 });
 
 export default router;
