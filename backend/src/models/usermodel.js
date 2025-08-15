@@ -26,6 +26,7 @@ const userSchema = new mongoose.Schema({
     },
     googleId: {
         type: String,
+        index: true, // Create an index on the googleId field for faster lookups
         unique: true,
         sparse: true // Creates a unique index but allows multiple documents to have a null value
     }
@@ -48,8 +49,8 @@ userSchema.pre("save", async function (next) {
 
 // Method to compare the provided password with the hashed password stored in the database
 // This method can be called on an instance of the User model to verify a password during login
-userSchema.method.comparePassword = async function(password){
-    return bcrypt.compare(password, this.password);
+userSchema.methods.comparePassword = async function(password){
+    return await bcrypt.compare(password, this.password);
 }
 
 const User = mongoose.model("User", userSchema);
