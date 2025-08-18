@@ -44,7 +44,7 @@ const FormSchema = new mongoose.Schema({
   title: { type: String, required: true }, // Title of the form
   objective: { type: String, required: true }, // Objective of the form
   questions: [QuestionSchema], // Array of questions in the form
-
+  isAnonymous: { type: Boolean, default: false }, // Whether the form is anonymous
   //controls for report generation
   reportTryCount: { type: Number, default: 3 }, // Number of tries left for generating reports
   lastReportResponseCount: { type: Number, default: 0 } // Last known response count when report was generated
