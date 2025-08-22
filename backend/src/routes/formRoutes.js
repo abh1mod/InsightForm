@@ -15,7 +15,7 @@ router.use(jwtAuthorisation);
 // If no forms are found, it returns a message indicating that no forms were found.
 router.get("/userForms", async (req, res) => {
     try{
-        let formData =  await Form.find({userId: req.user.id}).sort({updatedAt: -1}).select("title isLive isAnonymous");
+        let formData =  await Form.find({userId: req.user.id}).sort({updatedAt: -1}).select("title isLive isAnonymous authRequired");
         if(!formData || formData.length === 0){
             return res.status(200).json({success:false, message:"No Forms Found"});
         }

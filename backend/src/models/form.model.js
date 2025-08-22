@@ -6,13 +6,8 @@ const QuestionSchema = new mongoose.Schema({
     type: String,
     enum: [
       'short_answer',
-      'paragraph',
-      'multiple_choice',
-      'checkboxes',
-      'dropdown',
-      'file_upload',
-      'date',
-      'time'
+      'MCQ',
+      'rating'
     ],
     required: true
   }, // Type of question
@@ -44,6 +39,7 @@ const FormSchema = new mongoose.Schema({
   title: { type: String, required: true }, // Title of the form
   objective: { type: String, required: true }, // Objective of the form
   questions: [QuestionSchema], // Array of questions in the form
+  authRequired: { type: Boolean, default: true }, // Whether authentication is required to submit the form
   isAnonymous: { type: Boolean, default: false }, // Whether the form is anonymous
   //controls for report generation
   reportTryCount: { type: Number, default: 3 }, // Number of tries left for generating reports
