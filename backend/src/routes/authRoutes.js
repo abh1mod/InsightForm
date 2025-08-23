@@ -133,21 +133,24 @@ router.get('/google', blockIfLoggedIn,
 ));
 
 // This is the callback route that Google will redirect to after authentication
-// It will handle the response from Google and generate a JWT token
+// after coming to this route, passport will exchange the authorization code for access token and fetch the user profile from Google
+// then it will call the verify function defined in the GoogleStrategy above
+// and then finally it will call this callback function in passport.authenticate
+
 // If the user is authenticated successfully, it will return a token
 // If the user is not authenticated, it will return an error
 router.get('/redirect/google', (req, res, next) => {
     passport.authenticate('google', { session: false }, (err, user, info) => {
-        if(err) return next(err);
+        if(err) return res.redirect('http://localhost:5000/auth/failure?error=server_error');
         if (!user) {
-            return res.status(401).json({ success: false, message: "Authentication failed" });
+            return res.redirect('http://localhost:5000/auth/failure?error=access_denied');
         }
         try {
             const token = isJWT.sign({id: user._id}, process.env.SECRET_KEY, {expiresIn: '1 days'});
-            return res.json({success: true, token: 'Bearer ' + token});
+            return res.redirect(`http://localhost:5000/auth/success?token=${token}`);
         } catch (error) {
             console.log(error);
-            return next(error);
+            return res.redirect('http://localhost:5000/auth/failure?error=token_creation_failed');
         }
     }) (req, res, next);
 });
