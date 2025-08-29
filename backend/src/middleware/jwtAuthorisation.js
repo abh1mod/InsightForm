@@ -2,7 +2,7 @@ import dotenv from "dotenv";
 dotenv.config();
 import passport from "passport";
 import { Strategy as JwtStrategy, ExtractJwt } from 'passport-jwt';
-import User from "../models/usermodel.js";
+import User from "../models/user.model.js";
 
 const opts = {
     // Tell Passport to extract the JWT from the 'Authorization: Bearer <token>' header
