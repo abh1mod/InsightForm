@@ -195,7 +195,7 @@ router.get('/redirect/google', (req, res, next) => {
 // once the token is verified, the user's isVerified field is set to true
 // and the verificationToken and verificationTokenExpiry fields are cleared
 // finally a JWT token is generated and sent to the user
-router.get('/verify/:token', async (req, res, next) => {
+router.get('/verify/:token', blockIfLoggedIn, async (req, res, next) => {
     try{
         const token = req.params.token;
         const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
@@ -218,12 +218,12 @@ router.get('/verify/:token', async (req, res, next) => {
 // first check if the user with the given email exists and is not verified
 // if such a user exists, generate a new verification token, save it to the database
 // and send a new verification email to the user
-router.post('/resend-verification', async (req, res, next) => {
+router.post('/resend-verification', blockIfLoggedIn, async (req, res, next) => {
     try{
         const {email} = req.body;
         if(!email) return res.status(400).json({success: false, message: "Please provide an email"});
         let user = await User.findOne({email: email, isVerified: false});
-        if(!user) return res.status(400).json({success: false, message: "No unverified user found with this email"});
+        if(!user) return res.status(400).json({success: false, message: "Error finding mail"});
         const verificationToken = user.generateVerificationToken();
         await user.save();
         try{
@@ -240,8 +240,74 @@ router.post('/resend-verification', async (req, res, next) => {
         }
         catch(error){
             console.log(error);
-            return res.status(500).json({success:false, message:"Error sending verification email"});
+            return res.status(500).json({success:false, message:"Error sending email"});
         }
+    }
+    catch(error){
+        console.log(error);
+        return next(error);
+    }
+});
+
+// route to initiate the forget password process
+// it expects the user's email in the request body
+// if the email is valid and belongs to a user,
+// it generates a reset password token and sends it to the user's email
+// the user can then use this token to reset their password
+router.post('/forget-password', blockIfLoggedIn, async (req, res, next) => {
+    try{
+        const email = req.body.email;
+        if(!email) return res.status(400).json({success: false, message: "Please provide an email"});
+        const user = await User.findOne({email: email});
+        if(!user) return res.status(400).json({success: false, message: "Error finding mail"});
+        const token = user.generateResetPasswordToken();
+        await user.save();
+        try{
+            const verificationUrl = `http://localhost:5000/reset-password/${token}`;
+            const mailOptions = {
+                from: process.env.EMAIL_USER,
+                to: user.email,
+                subject: 'Password Reset',
+                html: `<p>Please click the following link to reset your password:</p>
+                    <a href="${verificationUrl}">Reset Password</a>`
+            };
+            await transporter.sendMail(mailOptions);
+            return res.status(200).json({success:true, message:"Password Reset link sent. Please check your email."});
+        }
+        catch(error){
+            console.log(error);
+            return res.status(500).json({success:false, message:"Error sending email"});
+        }
+    }
+    catch(error){
+        console.log(error);
+        return next(error);
+    }
+});
+
+// route to reset the password using the token sent to the user's email
+// this path is callled by frontend when user clicks on the reset password link in their email
+// it expects the new password in the request body and the token in the URL
+// if the token is valid and not expired, it updates the user's password
+// and clears the reset password token and its expiry time
+// finally it marks the user's email as verified (in case it was not already)
+// user must login again using the new password
+router.post('/reset-password/:token', blockIfLoggedIn, async (req, res, next) => {
+    try{
+        const token = req.params.token;
+        const newPassword = req.body.password;
+        if(!newPassword) return res.status(400).json({success: false, message: "Please provide a new password"});   
+        const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+        let user = await User.findOne({resetPasswordToken: hashedToken, resetPasswordTokenExpiry: {$gt: Date.now()}});
+        if(!user) return res.status(400).json({success: false, message: "Invalid or Expired Token"});
+        user.password = newPassword;
+        user.resetPasswordToken = undefined;
+        user.resetPasswordTokenExpiry = undefined;
+        user.isVerified = true;
+        user.verificationToken = undefined;
+        user.verificationTokenExpiry = undefined;
+        await user.save();
+        return res.json({success: true, message: "Password Reset Successfully"});
     }
     catch(error){
         console.log(error);
