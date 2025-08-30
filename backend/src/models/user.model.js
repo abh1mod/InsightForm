@@ -37,6 +37,8 @@ const userSchema = new mongoose.Schema({
     },
     verificationToken: String, // Token for email verification
     verificationTokenExpiry: Date, // Expiry time for the verification token
+    resetPasswordToken: String, // Token for resetting password
+    resetPasswordTokenExpiry: Date // Expiry time for the reset password token
 },
 {
     timestamps:true, // Automatically add createdAt and updatedAt fields
@@ -67,6 +69,16 @@ userSchema.methods.generateVerificationToken = function() {
     const token = crypto.randomBytes(32).toString('hex');
     this.verificationToken = crypto.createHash('sha256').update(token).digest('hex');   
     this.verificationTokenExpiry = Date.now() + 15 * 60 * 1000; // Token valid for 15 min
+    return token;
+}
+
+// Method to generate a reset password token
+// This method can be called on an instance of the User model to create a token and set its expiry time
+// we dont save the original token but only its hashed version
+userSchema.methods.generateResetPasswordToken = function() {
+    const token = crypto.randomBytes(32).toString('hex');
+    this.resetPasswordToken = crypto.createHash('sha256').update(token).digest('hex');   
+    this.resetPasswordTokenExpiry = Date.now() + 15 * 60 * 1000; // Token valid for 15 min
     return token;
 }
 
