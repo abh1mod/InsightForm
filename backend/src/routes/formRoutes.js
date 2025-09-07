@@ -2,9 +2,12 @@ import express from "express"
 import {Form} from "../models/form.model.js";
 import User from "../models/user.model.js";
 import mongoose from "mongoose";
+import {callAI as generateSuggestions} from "../middleware/AIMiddlewares.js";
+import { questionSuggestionPrompt, questionSuggestionResponseSchema } from "../middleware/AIMiddlewares.js";
 import jwtAuthorisation from "../middleware/jwtAuthorisation.js";
 const router = express.Router();
 
+// Middleware to parse JSON and URL-encoded data
 router.use(express.json());
 router.use(express.urlencoded({ extended: true }));
 
@@ -77,7 +80,7 @@ router.patch("/userForms/:formId", async (req, res) => {
         //`runValidators: true` ensures the new object conforms to your schema.
         // `new: true` returns the updated document.
         const options = {new: true , runValidators: true };
-        const updatedForm = await User.findByIdAndReplace({_id: formId, userId: req.user.id}, replacementObject, options); // Replace the form with the new data
+        const updatedForm = await User.findByIdAndReplace({_id: formId, userId: req.user.id}, formBody, options); // Replace the form with the new data
         if (!updatedForm) {
             return res.status(404).json({ success: false, message: "Form not found or you are not authorized to edit." });
         }
@@ -101,6 +104,41 @@ router.delete("/userForms/:formId", async (req, res) => {
         }
         // If the form is successfully deleted, return a success message
         return res.json({success:true, message: "Form deleted successfully"});
+    }
+    catch(error){
+        console.log(error);
+        next(error);
+    }
+});
+
+// This route generates AI-based question suggestions for a specific form based on its objective and existing questions.
+// It uses the Google Gemini API to generate 3 new, relevant, and distinct questions.
+// The route expects the form ID as a URL parameter and returns the suggested questions in the response.
+// it uses the callAI function from AIMiddlewares.js to interact with the AI service. (refer implementation in AIMiddlewares.js)
+// it uses the questionSuggestionPrompt function to structure the prompt for the AI service. (refer implementation in AIMiddlewares.js)
+// it uses the questionSuggestionResponseSchema to get strucutred AI response. (refer implementation in AIMiddlewares.js)
+router.get("/:formId/suggestQuestions", async (req, res) =>{
+    try{
+        const formId = req.params.formId;
+        const formData = await Form.findOne({_id: formId, userId: req.user.id}).select("objective questions");
+        if(!formData){
+            return res.status(404).json({success:false, message:"Form Not Found"});
+        }
+        const objective = formData.objective;
+        const existingQuestions = formData.questions;
+        const neededQuestionData = existingQuestions.map(q => {
+            return {questionType: q.questionType, questionText: q.questionText};
+        });
+        const structuredPrompt = questionSuggestionPrompt(objective, neededQuestionData);
+        const response = await generateSuggestions(structuredPrompt, questionSuggestionResponseSchema);
+        console.log(response.text);
+        const responseData = JSON.parse(response.text);
+        console.log(responseData);
+        
+        if(!responseData || !responseData.suggestions){
+            return res.status(500).json({success:false, message:"Failed to get suggestions from AI"});
+        }
+        return res.json({success:true, suggestions: responseData.suggestions}); 
     }
     catch(error){
         console.log(error);
