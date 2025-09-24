@@ -15,11 +15,12 @@ import jwtAuthorisation, {blockIfLoggedIn} from "../middleware/jwtAuthorisation.
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
-    type: "OAuth2",
+    // type: "OAuth2",
     user: process.env.EMAIL_USER,
-    clientId: process.env.GOOGLE_CLIENT_ID,
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    refreshToken: process.env.GOOGLE_REFRESH_TOKEN,
+    // clientId: process.env.GOOGLE_CLIENT_ID,
+    pass : process.env.APP_PASSWORD,
+    // clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    // refreshToken: process.env.GOOGLE_REFRESH_TOKEN,
   },
 });
 
@@ -128,6 +129,7 @@ router.post("/signup", blockIfLoggedIn, async (req,res, next)=>{
             console.log(error);
             return res.status(500).json({success:false, message:"Error sending verification email"});
         }
+
     }catch(error){
         console.log(error);
         return next(error);
@@ -140,6 +142,7 @@ router.post("/login", blockIfLoggedIn, (req, res, next) => {
         if(err) {
             return next(err);
         }
+        console.log(user);
         // If user is not found or password is incorrect, return an error
         if (!user) {
             return res.status(401).json({ success: false, message: "Invalid Credentials" });
@@ -164,7 +167,7 @@ router.post("/login", blockIfLoggedIn, (req, res, next) => {
 router.get('/google', blockIfLoggedIn, 
   passport.authenticate('google', {
         scope: [ 'profile','email' ],
-        session: false, // Disable session support
+        session: false // Disable session support
     }
 ));
 
