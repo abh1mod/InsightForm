@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { NavLink, Link } from "react-router-dom";
+import { useAppContext } from "../context/ContextAPI";
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
+  const {isLoggedIn, logout, theme, toggleTheme} = useAppContext();
 
   const linkBase = "block px-3 py-2 rounded-md text-sm font-medium transition-colors";
   const makeLinkClass = ({ isActive }) =>
@@ -22,11 +24,14 @@ export default function Navbar() {
             </Link>
           </div>
 
-          <div className="hidden md:flex items-center gap-1">
+          <div className="hidden md:flex items-center gap-2">
             <NavLink to="/" end className={makeLinkClass}>Home</NavLink>
             <NavLink to="/about" className={makeLinkClass}>About</NavLink>
             <NavLink to="/contact" className={makeLinkClass}>Contact</NavLink>
-            <NavLink to="/login" className={makeLinkClass}>Login</NavLink>
+            {!isLoggedIn && <NavLink to="/login" className={makeLinkClass}>Login</NavLink>}
+            <button onClick={toggleTheme} className="ml-2 px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50">
+              {theme === 'dark' ? 'Light' : 'Dark'}
+            </button>
           </div>
 
           <button
@@ -56,7 +61,10 @@ export default function Navbar() {
             <NavLink to="/" end className={makeLinkClass} onClick={() => setIsOpen(false)}>Home</NavLink>
             <NavLink to="/about" className={makeLinkClass} onClick={() => setIsOpen(false)}>About</NavLink>
             <NavLink to="/contact" className={makeLinkClass} onClick={() => setIsOpen(false)}>Contact</NavLink>
-            <NavLink to="/login" className={makeLinkClass} onClick={() => setIsOpen(false)}>Login</NavLink>
+            {!isLoggedIn && <NavLink to="/login" className={makeLinkClass} onClick={() => setIsOpen(false)}>Login</NavLink>}
+            <button onClick={() => { toggleTheme(); setIsOpen(false); }} className={makeLinkClass}>
+              {theme === 'dark' ? 'Light' : 'Dark'} Mode
+            </button>
           </div>
         </div>
       )}

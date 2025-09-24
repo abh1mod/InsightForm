@@ -6,7 +6,7 @@ const Home = () => {
         <section className="relative overflow-hidden rounded-2xl bg-white p-8 shadow-sm ring-1 ring-gray-200">
             <div className="max-w-2xl">
                 <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-gray-900">Welcome to InsightForm</h1>
-                <p className="mt-4 text-gray-600">
+                <p className="mt-4 text-gray-600" >
                     Build forms faster with a clean, minimal, and responsive UI. Explore the app to see how the layout and navigation work together.
                 </p>
                 <div className="mt-6">
