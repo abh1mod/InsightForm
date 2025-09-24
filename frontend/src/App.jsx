@@ -9,6 +9,7 @@ import AuthSuccess from "./pages/AuthSuccess";
 import AuthFailure from "./pages/AuthFailure";
 import PrivateRoute from "./components/PrivateRoute";
 import VerifyEmail from "./pages/VerifyEmail";
+import ResetPassword from "./pages/ResetPassword";
 
 function App() {
    return (
@@ -23,6 +24,7 @@ function App() {
           <Route path="/auth/failure" element={<AuthFailure />} />
 
           <Route path="/verify/:token" element={<VerifyEmail/>} />
+          <Route path="/reset-password/:token" element={<ResetPassword />} />
           <Route 
             path="/dashboard" 
             element={

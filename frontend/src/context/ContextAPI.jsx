@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
-
+import { toast } from "react-toastify";
 const Context = createContext();
 
 export const ContextProvider = ({ children }) => {
@@ -33,7 +33,10 @@ export const ContextProvider = ({ children }) => {
   }, [theme]);
 
   const login = (newToken) => setToken(newToken);
-  const logout = () => setToken(null);
+  const logout = () => {
+    toast.info("Logged out successfully");
+    setToken(null);
+  }
   const toggleTheme = () => setTheme((t) => (t === "light" ? "dark" : "light"));
 
   const value = useMemo(

@@ -4,6 +4,7 @@ import { useParams } from "react-router-dom";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { useAppContext } from "../context/ContextAPI";
+import { toast } from 'react-toastify';
 
 const VerifyEmail = () =>{
     const { token } = useParams();
@@ -18,13 +19,15 @@ const VerifyEmail = () =>{
             try {
                 const res = await axios.get(`http://localhost:3000/api/auth/verify/${token}`);
                 if (res.data.token) {
-                    setMessage(res.data.message);
+                    toast.success(res.data.message);
                     console.log(res.data);
-                    login(res.data.token); // Save token in context + localStorage
+                    login(res.data.token); 
                     navigate("/dashboard");
                 }
 
             } catch (error) {
+                toast.error(error.response?.data?.message || "Email verification failed!");
+                setMessage("Email verification failed or the token has expired.");
                 console.error("Error verifying email:", error.response ? error.response.data : error.message);
                 // Handle error (e.g., show an error message)
             }

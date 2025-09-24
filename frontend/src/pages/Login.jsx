@@ -5,6 +5,8 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import LoginComp from "../components/LoginComp";
 import SignUpComp from "../components/SignUpComp";
+import { toast } from 'react-toastify';
+
 
 
 const Login = () => {
@@ -20,6 +22,11 @@ const Login = () => {
   const [signupPassword, setSignUpPassword] = useState("")
 
   const [showSignup, setShowSignup] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const [activeResendLink, setActiveResendLink] = useState(false);
+
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
   // If user is already logged in, redirect to dashboard
   useEffect(() => {
@@ -49,6 +56,7 @@ const Login = () => {
         password : loginPassword,
       });
       if (res.data.token) {
+        toast.success(res.data.message || "Login successful!");
         login(res.data.token); // Save token in context + localStorage
         navigate("/dashboard");
       }
@@ -74,6 +82,8 @@ const Login = () => {
 
       if (res.data.success) {
         console.log("SignUp Successfully")
+        toast.success(res.data.message || "Signup successful! Please verify your email before logging in.");
+        setActiveResendLink(true);
       }
     } catch (err) {
       console.error(err.response?.data || err.message);
@@ -89,27 +99,88 @@ const Login = () => {
     window.location.href = "http://localhost:3000/api/auth/google";
   };
 
+  const handlePasswordReset = async () =>{
+    setSendingEmail(true);
+    setError("");
+    if (!emailRegex.test(loginEmail)) {
+      setError("Please enter a valid email address.");
+      setSendingEmail(false);
+      return;
+    }
+      try{
+        const res = await axios.post("http://localhost:3000/api/auth/forget-password", {
+          email: loginEmail,
+        });
+        if(res.data.success){
+          toast.success(res.data.message || "Password reset email sent!");
+        }
+      }catch(err){
+        console.error(err);
+        toast.error(err.response?.data?.message || "Error sending password reset email.");
+      }
+      setSendingEmail(false);
+  }
+
+const handleResendVerification = async () =>{
+    setSendingEmail(true);
+    setError("");
+    if (!emailRegex.test(signupEmail)) {
+      setError("Please enter a valid email address.");
+      setSendingEmail(false);
+      return;
+    }
+      try{
+        const res = await axios.post("http://localhost:3000/api/auth/resend-verification",{
+          email : signupEmail
+        });
+        if(res.data.success){
+          toast.success(res.data.message || "Verification email resent!");
+        }
+      }catch(err){
+        console.error(err);
+        toast.error(err.response?.data?.message || "Error resending verification email.");
+      }
+      setSendingEmail(false);
+  }
+
   return (
-    <div className="flex h-[80vh] items-center justify-center ">
-      <div className="bg-white p-8 rounded-2xl shadow-xl w-96">
-        <h2 className="text-2xl font-bold mb-6 text-center">{showSignup === true ? "Sign Up" : "Log In"}</h2>
+    <div className="flex h-[80vh] items-center justify-center">
+      <div className="flex flex-col bg-white p-8 rounded-2xl shadow-xl w-96 dark:bg-gray-900 dark:shadow-lg">
+        <h2 className="text-2xl font-bold mb-6 text-center text-gray-900 dark:text-gray-100">
+          {showSignup === true ? "Sign Up" : "Log In"}
+        </h2>
 
         {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-red-600 text-sm">{error}</p>
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg dark:bg-red-900/30 dark:border-red-700">
+            <p className="text-red-600 text-sm dark:text-red-400">{error}</p>
           </div>
         )}
 
-        {!showSignup && <LoginComp
+        {!showSignup && <>
+          <LoginComp
             email = {loginEmail}
             password = {loginPassword}
             setEmail = {setLoginEmail}
             setPassword = {setLoginPassword}
             onFormSubmit = {handleLogin}
             loading = {loading}
-        />}
+        />
+        <button
+          type="button"
+          onClick={handlePasswordReset}
+          disabled={sendingEmail}
+          className={`text-sm text-center mt-4 bg-transparent border-none 
+            ${sendingEmail
+              ? "text-gray-400 cursor-not-allowed dark:text-gray-500"
+              : "text-gray-600 hover:underline hover:text-blue-600 cursor-pointer dark:text-gray-300 dark:hover:text-blue-400"
+            }`}
+        >
+          Forgot your password?
+        </button>
+        </>  }
 
-        {showSignup && <SignUpComp
+        {showSignup &&  <>
+          <SignUpComp
             name = {username}
             email = {signupEmail}
             password = {signupPassword}
@@ -118,22 +189,36 @@ const Login = () => {
             setPassword = {setSignUpPassword}
             onFormSubmit = {handleSignUp}
             loading = {loading}
-        />}
+        />
+        {activeResendLink &&
+          <button
+          type="button"
+          onClick={handleResendVerification}
+          disabled={sendingEmail}
+          className={`text-sm text-center mt-4 bg-transparent border-none 
+            ${sendingEmail
+              ? "text-gray-400 cursor-not-allowed dark:text-gray-500"
+              : "text-gray-600 hover:underline hover:text-blue-600 cursor-pointer dark:text-gray-300 dark:hover:text-blue-400"
+            }`}
+        >
+          Resend Confrimation Link
+        </button>}
+        </> }
 
 
         <div className="mt-6">
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300" />
+              <div className="w-full border-t border-gray-300 dark:border-gray-700" />
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white text-gray-500">Or continue with</span>
+              <span className="px-2 bg-white text-gray-500 dark:bg-gray-900 dark:text-gray-400">Or continue with</span>
             </div>
           </div>
           
           <button
             onClick={handleGoogleLogin}
-            className="w-full mt-4 flex items-center justify-center bg-red-500 text-white p-2 rounded-lg hover:bg-red-600 transition-colors"
+            className="w-full mt-4 flex items-center justify-center bg-red-500 text-white p-2 rounded-lg hover:bg-red-600 transition-colors dark:bg-red-600 dark:hover:bg-red-700"
             disabled={loading}
           >
             <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
@@ -144,7 +229,10 @@ const Login = () => {
             </svg>
              {showSignup === true ? "Sign Up" : "Log In"} with Google
           </button>
-          <p onClick={() => setShowSignup(!showSignup)} className="text-sm text-gray-600 text-center mt-4 hover:underline hover:text-blue-600 cursor-pointer">
+          <p 
+            onClick={() => setShowSignup(!showSignup)} 
+            className="text-sm text-gray-600 text-center mt-4 hover:underline hover:text-blue-600 cursor-pointer dark:text-gray-300 dark:hover:text-blue-400"
+          >
             {showSignup ? "Already have an account?" : "Didn't have an Account?"}
         </p>
         </div>
