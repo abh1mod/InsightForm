@@ -2,8 +2,8 @@ import express from "express"
 import {Form} from "../models/form.model.js";
 import User from "../models/user.model.js";
 import mongoose from "mongoose";
-import {callAI as generateSuggestions} from "../middleware/AIMiddlewares.js";
-import { questionSuggestionPrompt, questionSuggestionResponseSchema } from "../middleware/AIMiddlewares.js";
+import {callAI as generateSuggestions} from "../services/AI.js";
+import { questionSuggestionPrompt, questionSuggestionResponseSchema } from "../services/AI.js";
 import jwtAuthorisation from "../middleware/jwtAuthorisation.js";
 const router = express.Router();
 

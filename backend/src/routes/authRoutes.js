@@ -1,6 +1,6 @@
 import dotenv from "dotenv";
 dotenv.config();
-import limiter from "../middleware/rateLimiterConfig.js";
+import limiter from "../middleware/rateLimiter.js";
 import express from "express"
 import User from "../models/user.model.js";
 import mongoose from "mongoose";
