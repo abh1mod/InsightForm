@@ -14,12 +14,10 @@ const opts = {
 passport.use(new JwtStrategy(opts, async (jwt_payload, done) => {
     try {
         // jwt_payload is the decoded token (e.g., { sub: 'user_id', email: '...' })
-        // 'sub' is the standard claim for subject (user ID)
         const user = await User.findOne({_id: jwt_payload.id});
 
         if (user) {
             // If user is found, call done with the user object
-            // This will attach the user to req.user
             return done(null, user);
         } else {
             // If user is not found

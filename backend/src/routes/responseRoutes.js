@@ -2,6 +2,7 @@ import express from "express"
 import User from "../models/user.model.js";
 import {Form} from "../models/form.model.js";
 import Response from "../models/response.model.js";
+import limiter from "../middleware/rateLimiterConfig.js";
 import mongoose from "mongoose";
 const router = express.Router();
 
@@ -38,18 +39,18 @@ router.get("/viewForms/:formId", async (req, res) => {
 // This route allows the user to submit a response to a specific form.
 // It expects the form ID in the URL and the response data in the request body.
 // responseData should be the same as the structure defined in response.model.js
-router.post("/submitResponse/:formId", async (req, res) => {
+router.post("/submitResponse/:formId", limiter, async (req, res) => {
     try{
-        const responseData = req.body.responseData; // the response data from the user
         const formId = req.params.formId; // the form ID from the URL
-        // if responseData is not present
-        if(!responseData){
-            return res.json({sucess: false, message: 'No response Data'});
-        }
         // if formId is not valid or not live
         const form = await Form.findOne({ _id: formId, isLive: true });
         if(!form){
             return res.status(404).json({success: false, message: "Form Not Found or Not Live"});
+        }
+        const responseData = req.body.responseData; // the response data from the user
+        // if responseData is not present
+        if(!responseData){
+            return res.json({sucess: false, message: 'No response Data'});
         }
         // if form requires authentication, check if userId is present in responseData and valid
         // also check if user has already submitted response to this form
@@ -65,6 +66,9 @@ router.post("/submitResponse/:formId", async (req, res) => {
             if(response_userId){
                 return res.status(400).json({success: false, message: "User has already submitted response"});
             }
+        }
+        else{
+            responseData.userId = null; // if form does not require authentication, set userId to null
         }
         // if form questions and responseData.responses length do not match then return error
         if(form.questions.length !== responseData.responses.length){
@@ -98,13 +102,13 @@ router.post("/submitResponse/:formId", async (req, res) => {
                 return res.status(400).json({success: false, message: 'not correct response', questionId: answer.questionId});
             }
         }
-        // if form is anonymous then put userId as null in responseData
-        if(form.isAnonymous){
+        // if auth is required and form is anonymous then put userId as null in responseData
+        if(form.authRequired && form.isAnonymous){
             responseData.userId = null;
         }
         const response = new Response({
             formId: formId,
-            userId: responseData.userId || null,
+            userId: responseData.userId,
             responses: responseData.responses
         });
         await response.save();

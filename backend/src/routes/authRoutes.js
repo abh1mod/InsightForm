@@ -1,5 +1,6 @@
 import dotenv from "dotenv";
 dotenv.config();
+import limiter from "../middleware/rateLimiter.js";
 import express from "express"
 import User from "../models/user.model.js";
 import mongoose from "mongoose";
@@ -12,15 +13,14 @@ import nodemailer from "nodemailer";
 const router = express.Router();
 import jwtAuthorisation, {blockIfLoggedIn} from "../middleware/jwtAuthorisation.js";
 
+
+
+// nodemailer configuration for sending emails
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
-    // type: "OAuth2",
     user: process.env.EMAIL_USER,
-    // clientId: process.env.GOOGLE_CLIENT_ID,
-    pass : process.env.APP_PASSWORD,
-    // clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    // refreshToken: process.env.GOOGLE_REFRESH_TOKEN,
+    pass: process.env.APP_PASSWORD,
   },
 });
 
@@ -91,7 +91,7 @@ passport.use(new LocalStrategy(async function verify(username, password, cb) {
     }
 }));
 
-router.post("/signup", blockIfLoggedIn, async (req,res, next)=>{
+router.post("/signup", limiter, blockIfLoggedIn, async (req,res, next)=>{
     try{
         const {email, password, name} = req.body;
         if(!email || !password || !name){
@@ -116,7 +116,7 @@ router.post("/signup", blockIfLoggedIn, async (req,res, next)=>{
                 from: process.env.EMAIL_USER,
                 to: newUser.email,
                 subject: 'Email Verification',
-                html: `<p>Please click the following link to verify your email:</p>
+                html: `<p>Please click the following link to verify your email, link is valid for 15 minutes:</p>
                     <a href="${verificationUrl}">verification url</a>`
             };
 
@@ -136,7 +136,7 @@ router.post("/signup", blockIfLoggedIn, async (req,res, next)=>{
     }
 });
 
-router.post("/login", blockIfLoggedIn, (req, res, next) => {
+router.post("/login", limiter, blockIfLoggedIn, (req, res, next) => {
     // Use Passport's local strategy to authenticate the user
     passport.authenticate("local", { session: false }, (err, user, info) =>{
         if(err) {
@@ -219,15 +219,35 @@ router.get('/verify/:token', blockIfLoggedIn, async (req, res, next) => {
 
 // route to resend the verification email if the user did not receive it or the token expired
 // first check if the user with the given email exists and is not verified
+// and daily limit is not reached and last email sent was 2 minutes ago
 // if such a user exists, generate a new verification token, save it to the database
 // and send a new verification email to the user
-router.post('/resend-verification', blockIfLoggedIn, async (req, res, next) => {
+router.post('/resend-verification', limiter, blockIfLoggedIn, async (req, res, next) => {
     try{
         const {email} = req.body;
         if(!email) return res.status(400).json({success: false, message: "Please provide an email"});
         let user = await User.findOne({email: email, isVerified: false});
         if(!user) return res.status(400).json({success: false, message: "Error finding mail"});
+
+        // check if user has exceeded daily limit for resending verification email
+        if(user.verificationEmailAttemptsExpires < Date.now()){
+            user.verificationEmailAttempts = 5; // reset attempts if expiry time has passed
+            user.verificationEmailAttemptsExpires = Date.now() + 24*60*60*1000; // set new expiry time for next 24 hours
+        }
+
+        // if daily limit is reached, return an error
+        if(user.verificationEmailAttempts <= 0){
+            return res.status(429).json({success: false, message: "Verification email resend limit reached. Please try again after 24hrs."});
+        }
+
+        // check if last email was sent less than 2 minutes ago
+        const twoMinutes = 2 * 60 * 1000;
+        if (user.lastTokenSentAt && (Date.now() - user.lastTokenSentAt.getTime()) < twoMinutes) {
+            return res.status(400).json({success: false, message: "Please wait before requesting another verification email"});
+        }
         const verificationToken = user.generateVerificationToken();
+        user.lastTokenSentAt = Date.now(); // update the last sent time
+        user.verificationEmailAttempts -= 1; // decrement the attempts
         await user.save();
         try{
             const verificationUrl = `http://localhost:5000/verify/${verificationToken}`;
@@ -254,16 +274,36 @@ router.post('/resend-verification', blockIfLoggedIn, async (req, res, next) => {
 
 // route to initiate the forget password process
 // it expects the user's email in the request body
-// if the email is valid and belongs to a user,
+// if the email is valid and belongs to a user
+// and daily limit is not reached and last email sent was 2 minutes ago,
 // it generates a reset password token and sends it to the user's email
 // the user can then use this token to reset their password
-router.post('/forget-password', blockIfLoggedIn, async (req, res, next) => {
+router.post('/forget-password', limiter, blockIfLoggedIn, async (req, res, next) => {
     try{
         const email = req.body.email;
         if(!email) return res.status(400).json({success: false, message: "Please provide an email"});
         const user = await User.findOne({email: email});
         if(!user) return res.status(400).json({success: false, message: "Error finding mail"});
+
+        // check if user has exceeded daily limit for password reset
+        if(user.passwordResetAttemptsExpires < Date.now()){
+            user.passwordResetAttempts = 5; // reset attempts if expiry time has passed
+            user.passwordResetAttemptsExpires = Date.now() + 24*60*60*1000; // set new expiry time for next 24 hours
+        }
+
+        // if daily limit is reached, return an error
+        if(user.passwordResetAttempts <= 0){
+            return res.status(429).json({success: false, message: "Password reset limit reached. Please try again after 24hrs."});
+        }
+
+        // check if last email was sent less than 2 minutes ago
+        const twoMinutes = 2 * 60 * 1000;
+        if (user.lastTokenSentAt && (Date.now() - user.lastTokenSentAt.getTime()) < twoMinutes) {
+            return res.status(400).json({success: false, message: "Please wait before requesting another password reset email"});
+        }
         const token = user.generateResetPasswordToken();
+        user.lastTokenSentAt = Date.now(); // update the last sent time
+        user.passwordResetAttempts -= 1; // decrement the attempts
         await user.save();
         try{
             const verificationUrl = `http://localhost:5000/reset-password/${token}`;

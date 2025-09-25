@@ -3,6 +3,9 @@ import { GoogleGenAI, Type } from "@google/genai";
 // Initialize GoogleGenAI client, gemini api key will be automatically picked up from env file
 const ai = new GoogleGenAI({});
 
+// Function to create the prompt for question suggestions
+// It takes the form's objective and existing questions as input
+// It returns a structured prompt string that guides the AI to generate relevant questions
 const questionSuggestionPrompt = (objective, neededQuestionData) => {
     const text = `
                     Objective:
@@ -17,6 +20,10 @@ const questionSuggestionPrompt = (objective, neededQuestionData) => {
     return text;
 }
 
+// Define the expected structure of the AI's response for question suggestions
+// This schema ensures that the AI returns data in a predictable format
+// The response should be a JSON object with a "suggestions" array
+// Each suggestion should include "questionType", "questionText", and "options" (if applicable)
 const questionSuggestionResponseSchema = {
             type: Type.OBJECT,
             properties: {
@@ -50,6 +57,10 @@ const questionSuggestionResponseSchema = {
             required: ["suggestions"]
         };
 
+// Function to call the AI service with a given prompt and response schema
+// It uses the Google Gemini API to generate content based on the prompt
+// The response is expected to conform to the provided response schema
+// The function returns the AI's response, which can then be processed further
 const callAI = async (prompt, responseSchema) =>{
     try {
         const response = await ai.models.generateContent({
