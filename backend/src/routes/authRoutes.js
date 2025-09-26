@@ -233,6 +233,7 @@ router.post('/resend-verification', limiter, blockIfLoggedIn, async (req, res, n
         if(user.verificationEmailAttemptsExpires < Date.now()){
             user.verificationEmailAttempts = 5; // reset attempts if expiry time has passed
             user.verificationEmailAttemptsExpires = Date.now() + 24*60*60*1000; // set new expiry time for next 24 hours
+            await user.save(); // save the updated user document
         }
 
         // if daily limit is reached, return an error
@@ -289,6 +290,7 @@ router.post('/forget-password', limiter, blockIfLoggedIn, async (req, res, next)
         if(user.passwordResetAttemptsExpires < Date.now()){
             user.passwordResetAttempts = 5; // reset attempts if expiry time has passed
             user.passwordResetAttemptsExpires = Date.now() + 24*60*60*1000; // set new expiry time for next 24 hours
+            await user.save(); // save the updated user document
         }
 
         // if daily limit is reached, return an error
