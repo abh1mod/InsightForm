@@ -46,6 +46,26 @@ router.get("/userForms/:formId", async (req, res) => {
     }
 });
 
+// This route allows the authenticated user to update the live status of a specific form by its ID.
+// It expects a boolean value for the live status in the request body.
+// If the form is successfully updated, it returns a success message.
+// If the form is not found or the user is not authorized to update it, it returns a 404 error.
+router.patch("/:formId/islive-status", async (req, res, next) =>{
+    try{
+        const {formId} = req.params;
+        const {isLive} = req.body;
+        const form = await Form.findOneAndUpdate({_id: formId, userId: req.user.id}, {isLive}, {new: true});
+        if(!form){
+            return res.status(404).json({success: false, message: "Form not found or you are not authorized to update."});
+        }
+        return res.json({success: true, message: "Form live status updated successfully"});
+    }
+    catch(error){
+        console.log(error);
+        return res.status(500).json({success: false, message: "Error updating form live status"});
+    }
+});
+
 // This route allows the authenticated user to create a new empty form only.
 // it is sent as a POST request with the form title and objective in the body.
 // It returns the created form id and success status.
@@ -80,7 +100,7 @@ router.patch("/userForms/:formId", async (req, res) => {
         //`runValidators: true` ensures the new object conforms to your schema.
         // `new: true` returns the updated document.
         const options = {new: true , runValidators: true };
-        const updatedForm = await User.findByIdAndReplace({_id: formId, userId: req.user.id}, formBody, options); // Replace the form with the new data
+        const updatedForm = await Form.findByIdAndReplace({_id: formId, userId: req.user.id}, formBody, options); // Replace the form with the new data
         if (!updatedForm) {
             return res.status(404).json({ success: false, message: "Form not found or you are not authorized to edit." });
         }

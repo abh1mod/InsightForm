@@ -20,6 +20,62 @@ const questionSuggestionPrompt = (objective, neededQuestionData) => {
     return text;
 }
 
+// Function to create the prompt for generating summary and suggestions
+// It takes the form's objective and pre-processed response data as input
+// It returns a structured prompt string that guides the AI to generate a summary and actionable suggestions
+const summaryAndSuggestionPrompt = (objective, responseData) => {
+    const text = `
+                    Objective:
+                    ${objective}
+                    
+                    Aggregated responses for each question:
+                    ${JSON.stringify(responseData, null, 2)}
+
+                    Task:
+                    1. Provide a concise summary of the overall responses.
+                    2. Suggest 3 to 5 actionable suggestions based on the summarized data.
+                    `
+    return text;
+}
+
+// response schema for summary and suggestions
+// This schema defines the expected structure of the AI's response
+// It ensures that the AI returns a summary and an array of suggestions
+// Each suggestion includes a title, detail, and suggestionType
+const summaryAndSuggestionResponseSchema = {
+    type: Type.OBJECT,
+    properties: {
+        summary: {
+            type: Type.STRING,
+            description: "A concise summary of the overall responses."
+        },
+        suggestions: {
+            type: Type.ARRAY,
+            description: "An array of actionable suggestions based on the summarized data.",
+            items: {
+                type: Type.OBJECT,
+                properties: {
+                    title: {
+                        type: Type.STRING,
+                        description: "A short heading for the suggestion."
+                    },
+                    detail: {
+                        type: Type.STRING,
+                        description: "A detailed description of the suggestion."
+                    },
+                    suggestionType: {
+                        type: Type.STRING,
+                        description: "The type of suggestion, e.g., 'insight', 'action', 'warning'.",
+                        enum: ['insight', 'action', 'warning'] // Enforce specific values
+                    }
+                },
+                required: ["title", "detail", "suggestionType"]
+            }
+        }
+    },
+    required: ["summary", "suggestions"]
+};
+
 // Define the expected structure of the AI's response for question suggestions
 // This schema ensures that the AI returns data in a predictable format
 // The response should be a JSON object with a "suggestions" array
@@ -47,7 +103,7 @@ const questionSuggestionResponseSchema = {
                     description: "An array of string options for MCQ. Must be empty for other types.",
                     items: {
                         type: Type.STRING
-                    }
+                        }
                     }
                 },
                 required: ["questionType", "questionText", "options"]
@@ -56,6 +112,8 @@ const questionSuggestionResponseSchema = {
             },
             required: ["suggestions"]
         };
+
+
 
 // Function to call the AI service with a given prompt and response schema
 // It uses the Google Gemini API to generate content based on the prompt
@@ -77,4 +135,4 @@ const callAI = async (prompt, responseSchema) =>{
     }
 }
         
-export { questionSuggestionPrompt, questionSuggestionResponseSchema, callAI };
+export { questionSuggestionPrompt, questionSuggestionResponseSchema, summaryAndSuggestionPrompt, summaryAndSuggestionResponseSchema, callAI };
