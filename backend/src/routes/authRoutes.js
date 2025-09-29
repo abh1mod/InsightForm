@@ -59,6 +59,7 @@ passport.use(new GoogleStrategy({
             googleId: profile.id,
             name: profile.displayName, // Save the user's name
             email: profile.emails[0].value, // Emails are in an array
+            isVerified: true // Since the email is verified by Google, we can mark it as verified
         });
 
         // 4. Save the new user to the database

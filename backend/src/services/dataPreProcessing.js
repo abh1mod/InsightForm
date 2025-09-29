@@ -1,3 +1,6 @@
+import natural from 'natural';
+import stopword from 'stopword';
+
 // service to preprocess form response data for report generation
 // input: array of response documents from the database
 // output: processed data object containing aggregated information for each question
@@ -99,4 +102,45 @@ const dataPreProcessing = async (allResponses) => {
     return processedData;
 }
 
-export default dataPreProcessing;
+// function to convert text based question into suitable format for word cloud charts
+// it takes processedData from dataPreProcessing function as input
+// adds data key in text based question which contains array of objects of this structure => {text: "word", value: count}
+// deletes answers key as it wont be required in charts 
+const textQuestionPreProcessing = async (processedData) => {
+    // tokenizer to split text into words
+    const tokenizer = new natural.WordTokenizer();
+    // iterate through each question in processedData
+    Object.keys(processedData).forEach((question) => {
+        // process only text based questions
+        if(processedData[question].questionType === 'text'){
+            const wordCount = {}; // object to hold word counts
+            const wordCountArray = []; // array to hold word count objects for charting
+            // iterate through each answer for the text question
+            processedData[question].answers.forEach((answer) => {
+                // tokenize the answer into array of words, remove stopwords    
+                const words = tokenizer.tokenize(answer);
+                const filteredWords = stopword.removeStopwords(words);
+                // go through each word, convert to its root form using Porter Stemmer, and count occurrences
+                filteredWords.forEach((word) => {
+                    const rootWord = natural.PorterStemmer.stem(word);
+                    if(wordCount.hasOwnProperty(rootWord)) {
+                        wordCount[rootWord] += 1;
+                    }
+                    else{
+                        wordCount[rootWord] = 1;
+                    }
+                });
+            });
+            // convert wordCount object into array of {text, value} objects for charting
+            Object.keys(wordCount).forEach((word) => {
+                wordCountArray.push({text: word, value: wordCount[word]});
+            });
+            // add the word count array to processedData and remove raw answers
+            processedData[question].distribution = wordCountArray;
+            delete processedData[question].answers;
+        }
+    });
+    return processedData;
+}
+
+export {dataPreProcessing, textQuestionPreProcessing};
