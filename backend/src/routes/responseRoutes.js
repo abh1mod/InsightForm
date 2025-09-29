@@ -2,7 +2,7 @@ import express from "express"
 import User from "../models/user.model.js";
 import {Form} from "../models/form.model.js";
 import Response from "../models/response.model.js";
-import limiter from "../middleware/rateLimiterConfig.js";
+import limiter from "../middleware/rateLimiter.js";
 import mongoose from "mongoose";
 const router = express.Router();
 
