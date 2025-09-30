@@ -92,13 +92,13 @@ router.post("/submitResponse/:formId", limiter, async (req, res) => {
             // if question is MCQ then check if answer is one of the options
             // if question is rating then check if answer is a number between 1 and 10
             // if question is short_answer then check if answer is not empty
-            if(answer.questionType === "MCQ" && !question.options.includes(answer.answer)){
+            if(answer.questionType === "mcq" && !question.options.includes(answer.answer)){
                 return res.status(400).json({success: false, message: 'not correct response', questionId: answer.questionId});
             }
             else if(answer.questionType === "rating" && isNumberBetween1And10(answer.answer) === false){
                 return res.status(400).json({success: false, message: 'not correct response', questionId: answer.questionId});
             }
-            else if(answer.questionType === "short_answer" && answerText.length === 0){
+            else if(answer.questionType === "text" && answerText.length === 0){
                 return res.status(400).json({success: false, message: 'not correct response', questionId: answer.questionId});
             }
         }
