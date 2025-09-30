@@ -155,7 +155,7 @@ router.post("/login", limiter, blockIfLoggedIn, (req, res, next) => {
             }
             // If user is found and is verified, generate a JWT token
             const token = isJWT.sign({id: user._id}, process.env.SECRET_KEY, {expiresIn: '1 days'});
-            return res.json({sucess: true, token: 'Bearer ' + token});
+            return res.json({sucess: true, token: token});
         } catch (error) {
             console.log(error);
             return next(error);
@@ -210,7 +210,7 @@ router.get('/verify/:token', blockIfLoggedIn, async (req, res, next) => {
         user.verificationTokenExpiry = undefined;
         await user.save();
         const jwtToken = isJWT.sign({id: user._id}, process.env.SECRET_KEY, {expiresIn: '1 days'});
-        return res.json({success: true, token: 'Bearer ' + jwtToken, message: "Email Verified Successfully"});
+        return res.json({success: true, token: jwtToken, message: "Email Verified Successfully"});
     }
     catch(error){
         console.log(error);
