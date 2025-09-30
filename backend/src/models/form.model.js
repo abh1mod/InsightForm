@@ -5,8 +5,8 @@ const QuestionSchema = new mongoose.Schema({
   questionType: {
     type: String,
     enum: [
-      'short_answer',
-      'MCQ',
+      'text',
+      'mcq',
       'rating'
     ],
     required: true
@@ -37,7 +37,8 @@ const FormSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
   isLive: { type: Boolean, default: true }, // Whether the form is active or not
   title: { type: String, required: true }, // Title of the form
-  objective: { type: String, required: true }, // Objective of the form
+  objective: { type: String, required: true }, // Objective of the form visible to the form creator
+  description: { type: String, required: false }, // Description of the form visible to respondents
   questions: [QuestionSchema], // Array of questions in the form
   authRequired: { type: Boolean, default: true }, // Whether authentication is required to submit the form
   isAnonymous: { type: Boolean, default: false }, // Whether the form is anonymous
