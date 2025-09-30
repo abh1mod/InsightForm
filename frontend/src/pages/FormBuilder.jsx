@@ -82,7 +82,7 @@ const FormBuilder = () => {
   }
   }, [formID]);
 
-  const debouncedFormState = useDebounce(formState, 4000);
+  const debouncedFormState = useDebounce(formState, 2000);
 
   useEffect(() => {
     if (debouncedFormState) {
