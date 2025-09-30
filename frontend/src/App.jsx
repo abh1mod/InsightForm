@@ -10,6 +10,8 @@ import AuthFailure from "./pages/AuthFailure";
 import PrivateRoute from "./components/PrivateRoute";
 import VerifyEmail from "./pages/VerifyEmail";
 import ResetPassword from "./pages/ResetPassword";
+import FormCreate from "./pages/FormCreate";
+import FormBuilder from "./pages/FormBuilder";
 
 function App() {
    return (
@@ -25,14 +27,10 @@ function App() {
 
           <Route path="/verify/:token" element={<VerifyEmail/>} />
           <Route path="/reset-password/:token" element={<ResetPassword />} />
-          <Route 
-            path="/dashboard" 
-            element={
-              <PrivateRoute>
-                <Dashboard />
-              </PrivateRoute>
-            } 
-          />
+          <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+          <Route path="/formcreate" element={<PrivateRoute><FormCreate /></PrivateRoute>} />
+          <Route path="/formbuilder/:formID" element={<PrivateRoute><FormBuilder /></PrivateRoute>} />
+
         </Route>
       </Routes>
     </BrowserRouter>
