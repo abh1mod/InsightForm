@@ -42,6 +42,8 @@ const FormSchema = new mongoose.Schema({
   questions: [QuestionSchema], // Array of questions in the form
   authRequired: { type: Boolean, default: true }, // Whether authentication is required to submit the form
   isAnonymous: { type: Boolean, default: false }, // Whether the form is anonymous
+  reportGenerationLimit: { type: Number, default: 3 }, // Number of reports generated for the form
+  reportGenerationLimitExpiry: {type: Date, default: Date.now()} // Expiry time for the report generation limit
 }, { timestamps: true });
 
 const Form = mongoose.model('Form', FormSchema);

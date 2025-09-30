@@ -43,11 +43,11 @@ const userSchema = new mongoose.Schema({
 
     // Fields for daily password reset limit
     passwordResetAttempts: { type: Number, default: 5 }, // Number of allowed password reset attempts within a day
-    passwordResetAttemptsExpires: { type: Date, default: Date.now }, // Expiry time for the password reset attempts counter
+    passwordResetAttemptsExpires: { type: Date, default: Date.now() }, // Expiry time for the password reset attempts counter
 
     // Fields for daily email verification resend limit
     verificationEmailAttempts: { type: Number, default: 5 }, // Number of allowed verification email resends within a day
-    verificationEmailAttemptsExpires: { type: Date, default: Date.now }, // Expiry time for the verification email attempts counter
+    verificationEmailAttemptsExpires: { type: Date, default: Date.now() }, // Expiry time for the verification email attempts counter
 },
 {
     timestamps:true, // Automatically add createdAt and updatedAt fields

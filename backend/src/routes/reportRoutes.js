@@ -1,8 +1,11 @@
 import express, { response } from "express"
 import Response from "../models/response.model.js";
 import {Form, Report} from "../models/form.model.js";
+import {dataPreProcessing, textQuestionPreProcessing} from "../services/dataPreProcessing.js";
+import {callAI as generateReport, summaryAndSuggestionPrompt, summaryAndSuggestionResponseSchema} from "../services/AI.js";
 import mongoose from "mongoose";
 import jwtAuthorisation from "../middleware/jwtAuthorisation.js";
+import {AsyncParser} from 'json2csv';
 const router = express.Router();
 
 // Middleware to parse JSON and URL-encoded data
@@ -128,27 +131,136 @@ router.get("/:formId/latest-report", async (req, res) => {
     }
 });
 
+// This route generates a new report (summary and suggestions) for a specific form using AI service
+// The report is generated based on all the responses received for that form so far
+// The route is protected and requires authentication
+// Rate limiting is implemented to allow a maximum of 3 report generations per form per 24 hours
+// If there are no new responses since the last report generation, a new report will not be generated
 router.post("/:formId/generate-report", async (req, res) => {
+    const session = await mongoose.startSession(); // initialize a mongoose session for transaction
     try{
         const {formId} = req.params;
+        // check if form exists and belongs to the user
         const form = await Form.findOne({_id: formId, userId: req.user.id});
         if(!form){
             return res.status(404).json({success: false, message: "Form Not Found" });
         }
+        // check and update report generation limit if expiry time has passed
+        if(form.reportGenerationLimitExpiry < Date.now()){
+            form.reportGenerationLimit = 3;
+            form.reportGenerationLimitExpiry = Date.now() + 24*60*60*1000; // extend expiry by 24 hours
+            await form.save();
+        }
+        // if report generation limit is reached, return an error
+        if(form.reportGenerationLimit <= 0){
+            return res.json({success: false, message: "Report generation limit reached. Try again later."});
+        }
+        // check if there are new responses since the last report generation
+        // if no new responses, return an error
+        // else proceed to generate the report
         const responseCount = await Response.countDocuments({formId: formId});
-        const reportCount = await Report.countDocuments({formId: formId});
         const latestReport = await Report.findOne({formId: formId}).sort({createdAt: -1});
         if(latestReport && latestReport.responseCount === responseCount){
             return res.json({sucess: false, message: "No new responses since last report generation"});
         }
-        if(reportCount >= 3){
-            return res.json({success: false, message: "Report generation limit reached. Maximum 3 reports allowed per form."});
-        }
+        // get all responses for the form
+        // preprocess the data to get aggregated information for each question
+        // create a structured prompt using the form objective and the preprocessed data
+        const allResponses = await Response.find({formId: formId}).select("responses -_id");
+        const preProcessedData = dataPreProcessing(allResponses);
+        const structuredPrompt = summaryAndSuggestionPrompt(form.objective, preProcessedData);
+        // call the AI service with the structured prompt and the expected response schema
+        const aiResponse = await generateReport(structuredPrompt, summaryAndSuggestionResponseSchema);
+        const aiResponseData = JSON.parse(aiResponse.text); // parse the response text to get the summary and suggestions
         
+        // if AI service fails to provide a valid response, return an error
+        if(!aiResponseData || !aiResponseData.summary || !aiResponseData.suggestions){
+            return res.status(500).json({success:false, message:"Failed to get report from AI"});
+        }
+        // create a new report document
+        const newReport = new Report({
+            formId: form._id,
+            userId: req.user.id,
+            responseCount: responseCount,
+            summary: aiResponseData.summary,
+            suggestions: aiResponseData.suggestions
+        });
+        // use a transaction to ensure both report creation and report generation limit update are atomic
+        // if either operation fails, the transaction will be aborted and no changes will be made to the database
+        session.startTransaction();
+        await newReport.save({session});
+        form.reportGenerationLimit -= 1;
+        await form.save({session});
+        await session.commitTransaction();
+        return res.json({success: true, message: "Report generated successfully", report: aiResponseData});
+    }
+    catch(error){
+        await session.abortTransaction(); // abort the transaction in case of error
+        console.log(error);
+        res.json({success: false, message: "Error generating report" });
+    }
+    finally{
+        session.endSession(); // end the mongoose session
+    }
+});
+
+// This route retrieves the processed data for chart generation for a specific form
+// it first preprocess data in the same way for generate report route
+// then it converts text based question using textQuestionPreProcessing function (refer implementation for more details in ../services/dataPreProcessing.js)
+router.get("/:formId/chart-data", async (req, res) => {
+    try{
+        const formId = req.params.formId;
+        const res = await Form.findOne({_id: formId, userId: req.user.id});
+        if(!res){
+            return res.status(404).json({success: false, message: "Form Not Found" });
+        }
+        const allResponses = await Response.find({formId: formId}).select("responses -_id");
+        const preProcessedData = dataPreProcessing(allResponses);
+        const chartData = textQuestionPreProcessing(preProcessedData);
+        return res.json({success: true, chartData: chartData});
     }
     catch(error){
         console.log(error);
-        res.json({success: false, message: "Error generating report" });
+        res.json({success: false, message: "Error fetching chart data" });
+    }
+});
+
+// This route allows the user to download all the responses of a specific form in CSV format
+// It uses the json2csv library to convert JSON data to CSV
+// The route is protected and requires authentication
+router.get("/:formId/download-data", async (req, res) => {
+    try{
+        const formId = req.params.formId;
+        // check if form exists and belongs to the user
+        const form = await Form.findOne({_id: formId, userId: req.user.id});
+        if(!form){
+            return res.status(404).json({success: false, message: "Form Not Found" });
+        }
+        // get all responses for the form
+        // structure the data in a way that each row is an object where keys are question texts and values are the answers
+        // this structure is suitable for conversion to CSV format
+        const parser = new AsyncParser();
+        const allResponses = await Response.find({formId: formId}).select("responses -_id");
+        const rows = allResponses.map((response) => {
+            const rowObj = {};
+            response.responses.forEach((ans) => {
+                rowObj[ans.questionText] = ans.answer;
+            });
+            return rowObj;
+        });
+        // Convert the JSON data to CSV format
+        // using AsyncParser from json2csv for better performance with large datasets
+        const csv = await parser.parse(rows).promise();
+        // Set the response headers to indicate a file attachment with CSV content
+        res.header('Content-Type', 'text/csv');
+        res.attachment(`${form.title}-responses.csv`);
+        
+        // Send the CSV data
+        res.send(csv);
+    }
+    catch(error){
+        console.log(error);
+        res.json({success: false, message: "Error downloading data" });
     }
 });
 
