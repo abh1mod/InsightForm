@@ -204,7 +204,7 @@ const addOptionToQuestion = (qIndex) => {
     );
 
     if (res.data.success) {
-      console.log("AI Suggestions:", res.data.suggestions);
+      toast.success("Questions Loaded Successfully");
       setQuestions((prev) => [...prev, ...res.data.suggestions]);
     } else {
       toast.error(res.data.message || "Failed to generate questions");
@@ -216,12 +216,14 @@ const addOptionToQuestion = (qIndex) => {
   }
 };
 
+  useEffect(() => {
+    if(loading) document.body.style.overflow = "hidden";
+    else document.body.style.overflow = "auto";
+  },[loading]);
 
   return (
     <div >
-      {loading ? (
-        <HamsterLoader />
-      ) : (
+      {loading && <HamsterLoader />}
 
         <div className="min-h-screen flex font-sans relative ">
       {/* Fixed Left Sidebar - Add Question */}
@@ -427,11 +429,11 @@ const addOptionToQuestion = (qIndex) => {
       </button>
 
     </div>
-      )}
+     
     </div>
 
 
-    
+
   );
 };
 
