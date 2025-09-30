@@ -3,11 +3,15 @@ import "./HamsterLoader.css"; // Don't forget to import the CSS
 
 const HamsterLoader = () => {
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-black/80 backdrop-blur-sm z-50">
+    <div className="fixed inset-0 flex items-center justify-center z-50">
+      {/* Transparent dark background */}
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
+
+      {/* Loader stays on top */}
       <div
         aria-label="Orange and tan hamster running in a metal wheel"
         role="img"
-        className="wheel-and-hamster"
+        className="wheel-and-hamster relative z-10"
       >
         <div className="wheel"></div>
         <div className="hamster">
@@ -29,5 +33,6 @@ const HamsterLoader = () => {
     </div>
   );
 };
+
 
 export default HamsterLoader;
