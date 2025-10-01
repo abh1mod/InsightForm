@@ -3,3 +3,5 @@
 /frontend/node_modules
 /git_tips.txt
 node_modules
+/.DS_Store
+/backend/.DS_Store
