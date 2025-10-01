@@ -355,13 +355,9 @@ const addOptionToQuestion = (qIndex) => {
             {renderQuestionIcon(question.questionType)}
 
             <AutoResizeTextarea
-              type="text"
               value={question.questionText}
               onChange={(e) => handleQuestionTextChange(index, e.target.value)}
               placeholder="Enter your question"
-              className="flex-1 text-lg font-semibold text-gray-800 ml-2 p-1
-                        border-b border-gray-300 focus:outline-none focus:border-blue-500 
-                        transition-colors duration-200 bg-transparent "
             />
           </div>
 
@@ -407,10 +403,10 @@ const addOptionToQuestion = (qIndex) => {
 
                 {/* Placeholder for other question types */}
                 {( question.questionType === 'text') && (
-                  <div className="mt-4 ml-6"><input type="text" placeholder="User will enter text here..." disabled className="w-full p-2 border-b border-gray-300 rounded-md bg-gray-50 text-gray-500 italic" /></div>
+                  <div className="mt-4 ml-6"><input type="text" placeholder="User will enter text here..." disabled className="w-full p-2 border-b border-gray-200 rounded-md bg-gray-50 text-gray-500 italic" /></div>
                 )}
                 {( question.questionType === 'rating') && (
-                  <div className="mt-4 ml-6"><input type="text" placeholder="User will provide rating out of 10" disabled className="w-full p-2 border-b border-gray-300 rounded-md bg-gray-50 text-gray-500 italic" /></div>
+                  <div className="mt-4 ml-6"><input type="text" placeholder="User will provide rating " disabled className="w-full p-2 border-b border-gray-200 rounded-md bg-gray-50 text-gray-500 italic" /></div>
                 )}
               </div>
             ))
