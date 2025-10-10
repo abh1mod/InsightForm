@@ -9,14 +9,14 @@ const router = express.Router();
 router.use(express.json());
 router.use(express.urlencoded({ extended: true }));
 
-function isNumberBetween1And10(str) {
+function isNumberBetween1And5(str) {
   // 1. Convert the string to a number
   const num = Number(str);
 
   // 2. Check if it's a valid number and within the range
   //    - !isNaN(num) checks if the string was a number at all.
-  //    - num >= 1 && num <= 10 checks the range.
-  return !isNaN(num) && num >= 1 && num <= 10;
+  //    - num >= 1 && num <= 5 checks the range.
+  return !isNaN(num) && num >= 1 && num <= 5;
 }
 
 // This route allows users to view a specific form by its ID.
@@ -25,9 +25,11 @@ router.get("/viewForms/:formId", async (req, res,next) => {
     try{
         const formId = req.params.formId;
         const formData = await Form.findOne({_id: formId});
+        // if formId is not valid
         if(!formData){
             return res.status(404).json({success: false, message: "Form Not Found"});
         }
+        // if form is not live
         if(formData && !formData.isLive){
             return res.status(403).json({success: false, message: "Form is not live"});
         }
@@ -98,7 +100,7 @@ router.post("/submitResponse/:formId", limiter, async (req, res) => {
             if(answer.questionType === "mcq" && !question.options.includes(answer.answer)){
                 return res.status(400).json({success: false, message: 'not correct response', questionId: answer.questionId});
             }
-            else if(answer.questionType === "rating" && isNumberBetween1And10(answer.answer) === false){
+            else if(answer.questionType === "rating" && isNumberBetween1And5(answer.answer) === false){
                 return res.status(400).json({success: false, message: 'not correct response', questionId: answer.questionId});
             }
             else if(answer.questionType === "text" && answerText.length === 0){

@@ -226,7 +226,7 @@ useEffect(() => {
           {form.questions.map((q, index) => (
             <div
               key={q._id}
-              className="bg-white p-8 rounded-xl shadow-md border-l-4 border-blue-500"
+              className="bg-white w-full p-8 rounded-xl shadow-md border-l-4 border-blue-500"
             >
               <label className="block font-medium text-gray-800 text-lg">
                 {q.questionText}{" "}
