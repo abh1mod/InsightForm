@@ -4,7 +4,7 @@ import { useAppContext } from "../context/ContextAPI";
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
-  const {isLoggedIn, logout, theme, toggleTheme} = useAppContext();
+  const {isLoggedIn, logout} = useAppContext();
 
   const linkBase = "block px-3 py-2 rounded-md text-sm font-medium transition-colors";
   const makeLinkClass = ({ isActive }) =>
@@ -32,15 +32,6 @@ export default function Navbar() {
             {isLoggedIn && <NavLink to="/dashboard" className={makeLinkClass}>Dashboard</NavLink>}
             <NavLink to="/contact" className={makeLinkClass}>Contact</NavLink>
             {!isLoggedIn && <NavLink to="/login" className={makeLinkClass}>Login</NavLink>}
-            <button 
-              onClick={toggleTheme} 
-             
-            >
-            <p className={makeLinkClass}>
-              {theme === 'dark' ? 'Light' : 'Dark'} 
-            </p>
-              
-            </button>
           </div>
 
           <button
@@ -72,13 +63,6 @@ export default function Navbar() {
             {isLoggedIn && <NavLink to="/dashboard" className={makeLinkClass} onClick={() => setIsOpen(false)}>Dashboard</NavLink>}
             <NavLink to="/contact" className={makeLinkClass} onClick={() => setIsOpen(false)}>Contact</NavLink>
             {!isLoggedIn && <NavLink to="/login" className={makeLinkClass} onClick={() => setIsOpen(false)}>Login</NavLink>}
-            <button 
-              onClick={() => { toggleTheme(); setIsOpen(false); }} 
-            >
-            <p className={makeLinkClass}>
-              {theme === 'dark' ? 'Light' : 'Dark'}
-            </p>
-            </button>
           </div>
         </div>
       )}

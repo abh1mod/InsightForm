@@ -364,7 +364,7 @@ router.post('/reset-password/:token', blockIfLoggedIn, async (req, res, next) =>
 // route to check if the token is valid and the user is authenticated
 // used in the case when a user manually try to go to login or signup page while being logged in
 router.get('/me', jwtAuthorisation, (req, res) => {
-    return res.json({success: true});
+    return res.json({success: true, userId: req.user._id});
 });
 
 export default router;

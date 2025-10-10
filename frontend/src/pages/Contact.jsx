@@ -59,7 +59,7 @@ export default function Contact() {
   };
 
   return (
-    <div className="min-h-screen p-4 md:p-8 
+    <div className="min-h-fit-content pb-8 px-4 rounded-lg
                     bg-gray-50 dark:bg-gray-900 transition-colors duration-500">
       <div className="mx-auto max-w-5xl">
         

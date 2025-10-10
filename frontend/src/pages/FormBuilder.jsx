@@ -6,6 +6,7 @@ import { useAppContext } from '../context/ContextAPI';
 import useDebounce from '../debounceHook/useDebounce';
 import AutoResizeTextarea from '../components/AutoResizeTextarea';
 import HamsterLoader from '../components/HamsterLoader';
+import { useNavigate } from 'react-router-dom';
 
 import {
   PlusIcon,
@@ -47,6 +48,8 @@ const FormBuilder = () => {
   // State for questions (example: one Multiple Choice question)
   const [questions, setQuestions] = useState([]);
 
+  const navigate = useNavigate(); 
+
   const firstRender = (fetchedForm) => {
     if (fetchedForm) {
       setFormTitle(fetchedForm.title || 'Untitled Form');
@@ -82,7 +85,7 @@ const FormBuilder = () => {
   }
   }, [formID]);
 
-  const debouncedFormState = useDebounce(formState, 2000);
+  const debouncedFormState = useDebounce(formState, 500);
 
   useEffect(() => {
     if (debouncedFormState) {
@@ -301,10 +304,18 @@ const addOptionToQuestion = (qIndex) => {
 
     {/* Actions */}
     <div className="flex items-center space-x-3">
-      <button className="flex items-center text-sm text-gray-600 hover:text-blue-600 transition-colors px-2.5 py-1.5 rounded-lg bg-gray-50 hover:bg-blue-50">
+      <button
+        onClick={() => navigate(`/formsubmit/${formID.formID}`, { state: { isPreview: true }})}
+
+       className="flex items-center text-sm text-gray-600 hover:text-blue-600 transition-colors px-2.5 py-1.5 rounded-lg bg-gray-50 hover:bg-blue-50">
         <EyeIcon className="w-4 h-4 mr-1.5" /> Preview
       </button>
-      <button className="flex items-center text-sm text-gray-600 hover:text-blue-600 transition-colors px-2.5 py-1.5 rounded-lg bg-gray-50 hover:bg-blue-50">
+      <button
+        onClick={() => {
+          navigator.clipboard.writeText(`http://localhost:5000/formsubmit/${formID.formID}`);
+          toast.success("Form link copied to clipboard");
+        }}
+       className="flex items-center text-sm text-gray-600 hover:text-blue-600 transition-colors px-2.5 py-1.5 rounded-lg bg-gray-50 hover:bg-blue-50">
         <LinkIcon className="w-4 h-4 mr-1.5" /> Copy Link
       </button>
     </div>
