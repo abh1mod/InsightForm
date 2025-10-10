@@ -12,6 +12,8 @@ import VerifyEmail from "./pages/VerifyEmail";
 import ResetPassword from "./pages/ResetPassword";
 import FormCreate from "./pages/FormCreate";
 import FormBuilder from "./pages/FormBuilder";
+import FormSubmit from "./pages/FormSubmit";
+
 
 function App() {
    return (
@@ -30,6 +32,7 @@ function App() {
           <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
           <Route path="/formcreate" element={<PrivateRoute><FormCreate /></PrivateRoute>} />
           <Route path="/formbuilder/:formID" element={<PrivateRoute><FormBuilder /></PrivateRoute>} />
+          <Route path="/formsubmit/:formID" element={<FormSubmit />} />
 
         </Route>
       </Routes>

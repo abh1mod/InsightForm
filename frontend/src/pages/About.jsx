@@ -11,41 +11,11 @@ const developers = [
 ];
 
 export default function About() {
-  // Local state for dark mode (ideally managed globally)
-  const [isDarkMode, setIsDarkMode] = useState(false);
-
-  // Effect to apply/remove the 'dark' class on the HTML element
-  useEffect(() => {
-    if (isDarkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-    // Cleanup function ensures the class is removed if the component unmounts
-    return () => {
-      document.documentElement.classList.remove('dark');
-    };
-  }, [isDarkMode]);
-
-  const toggleDarkMode = () => {
-    setIsDarkMode(prev => !prev);
-  };
+  
 
   return (
-    <div className="space-y-12 pb-20 transition-colors duration-500 bg-gray-50 dark:bg-gray-900 min-h-screen p-4 md:p-8">
+    <div className="space-y-8 pb-20 transition-colors duration-500 bg-gray-50 dark:bg-gray-900 min-h-screen px-4 md:px-8 pt-8 rounded-lg">
       
-      {/* Dark Mode Toggle Button */}
-      <button
-        onClick={toggleDarkMode}
-        className="fixed bottom-4 left-4 z-50 p-3 rounded-full bg-gray-800 text-white shadow-xl dark:bg-yellow-400 dark:text-gray-900 transition-colors duration-300 hover:scale-105"
-        aria-label="Toggle dark mode"
-      >
-        {isDarkMode ? (
-          <SunIcon className="w-6 h-6" />
-        ) : (
-          <MoonIcon className="w-6 h-6" />
-        )}
-      </button>
 
       {/* 1. Hero Section: The 'Our Story' Equivalent */}
       <section className="text-center rounded-2xl p-10 shadow-lg ring-1 transition-colors duration-500

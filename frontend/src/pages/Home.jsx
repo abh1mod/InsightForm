@@ -34,7 +34,7 @@ const testimonials = [
 
 const Home = () => {
     return (
-        <div className="relative isolate overflow-hidden pt-14 pb-24 lg:pb-32 min-h-screen 
+        <div className="relative isolate overflow-hidden pt-14 pb-24 lg:pb-32 min-h-screen rounded-lg
                         bg-gray-50 dark:bg-gray-900 transition-colors duration-500">
 
             <div className="mx-auto max-w-7xl px-6 lg:px-8 space-y-20">

@@ -21,14 +21,17 @@ function isNumberBetween1And10(str) {
 
 // This route allows users to view a specific form by its ID.
 // It checks if the form is live and returns the form details i.e. title and questions.
-router.get("/viewForms/:formId", async (req, res) => {
+router.get("/viewForms/:formId", async (req, res,next) => {
     try{
         const formId = req.params.formId;
-        const formData = await Form.findOne({_id: formId, isLive: true}).select("title questions");
+        const formData = await Form.findOne({_id: formId});
         if(!formData){
             return res.status(404).json({success: false, message: "Form Not Found"});
         }
-        return res.json({success: true, form: formData});
+        if(formData && !formData.isLive){
+            return res.status(403).json({success: false, message: "Form is not live"});
+        }
+        return res.json({success: true, form: {title : formData.title, description: formData.description, questions: formData.questions, authRequired : formData.authRequired}}); // return only title, description and questions
     }
     catch(error){
         console.log(error);
@@ -79,7 +82,7 @@ router.post("/submitResponse/:formId", limiter, async (req, res) => {
             const question = form.questions[i];
             const answer = responseData.responses[i];
             // check if questionId and questionType match
-            if(question._id !== answer.questionId){
+            if(question._id.toString() !== answer.questionId.toString()){
                 return res.status(400).json({success: false, message: 'Question id mismatch for question', questionId: answer.questionId});
             }
             if(question.questionType !== answer.questionType){
