@@ -50,6 +50,11 @@ passport.use(new GoogleStrategy({
         let user1 = await User.findOne({ email: profile.emails[0].value });
 
         if(user1) {
+            // in case the user has created the account with local sign up but hasnt verified their account yet, we make it verified now 
+            if(!user1.isVerified){
+                user1.isVerified = true;
+                await user1.save();
+            }
             return done(null, user1)
         }
 
@@ -92,7 +97,7 @@ passport.use(new LocalStrategy(async function verify(username, password, cb) {
     }
 }));
 
-router.post("/signup", limiter, blockIfLoggedIn, async (req,res, next)=>{
+router.post("/signup", limiter, blockIfLoggedIn, async (req,res)=>{
     try{
         const {email, password, name} = req.body;
         if(!email || !password || !name){
@@ -133,15 +138,25 @@ router.post("/signup", limiter, blockIfLoggedIn, async (req,res, next)=>{
 
     }catch(error){
         console.log(error);
-        return next(error);
+        if(error.name === "ValidationError"){
+            // 2. Check if the error is specifically for the 'password' field
+            if (error.errors.password) {
+                // 3. Send back the specific error message you defined in your schema
+                return res.status(400).json({
+                    success: false,
+                    message: error.errors.password.message // e.g., "Password must be 6 characters long"
+                });
+            }
+        }
+        return res.status(500).json({success:false, message:"Error signing up"});
     }
 });
 
-router.post("/login", limiter, blockIfLoggedIn, (req, res, next) => {
+router.post("/login", limiter, blockIfLoggedIn, (req, res) => {
     // Use Passport's local strategy to authenticate the user
     passport.authenticate("local", { session: false }, (err, user, info) =>{
         if(err) {
-            return next(err);
+            return res.status(500).json({ success: false, message: "Server Error" });
         }
         console.log(user);
         // If user is not found or password is incorrect, return an error
@@ -158,9 +173,9 @@ router.post("/login", limiter, blockIfLoggedIn, (req, res, next) => {
             return res.json({sucess: true, token: token});
         } catch (error) {
             console.log(error);
-            return next(error);
+            return res.status(500).json({ success: false, message: "Error Logging in" });
         }
-    })(req, res, next);
+    })(req, res);
 });
 
 // frontend will redirect to this route to initiate Google authentication
@@ -179,7 +194,7 @@ router.get('/google', blockIfLoggedIn,
 
 // If the user is authenticated successfully, it will return a token
 // If the user is not authenticated, it will return an error
-router.get('/redirect/google', (req, res, next) => {
+router.get('/redirect/google', (req, res) => {
     passport.authenticate('google', { session: false }, (err, user, info) => {
         if(err) return res.redirect('http://localhost:5000/auth/failure?error=server_error');
         if (!user) {
@@ -192,14 +207,14 @@ router.get('/redirect/google', (req, res, next) => {
             console.log(error);
             return res.redirect('http://localhost:5000/auth/failure?error=token_creation_failed');
         }
-    }) (req, res, next);
+    }) (req, res);
 });
 
 // route to verify the email using the token sent to the user's email
 // once the token is verified, the user's isVerified field is set to true
 // and the verificationToken and verificationTokenExpiry fields are cleared
 // finally a JWT token is generated and sent to the user
-router.get('/verify/:token', blockIfLoggedIn, async (req, res, next) => {
+router.get('/verify/:token', blockIfLoggedIn, async (req, res) => {
     try{
         const token = req.params.token;
         const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
@@ -214,16 +229,16 @@ router.get('/verify/:token', blockIfLoggedIn, async (req, res, next) => {
     }
     catch(error){
         console.log(error);
-        return next(error);
+        return res.status(500).json({success:false, message:"Error verifying email"});
     }
 });
 
-// route to resend the verification email if the user did not receive it or the token expired
+// route to resend the verification email token if the user did not receive it or the token expired
 // first check if the user with the given email exists and is not verified
 // and daily limit is not reached and last email sent was 2 minutes ago
 // if such a user exists, generate a new verification token, save it to the database
 // and send a new verification email to the user
-router.post('/resend-verification', limiter, blockIfLoggedIn, async (req, res, next) => {
+router.post('/resend-verification', limiter, blockIfLoggedIn, async (req, res) => {
     try{
         const {email} = req.body;
         if(!email) return res.status(400).json({success: false, message: "Please provide an email"});
@@ -265,12 +280,12 @@ router.post('/resend-verification', limiter, blockIfLoggedIn, async (req, res, n
         }
         catch(error){
             console.log(error);
-            return res.status(500).json({success:false, message:"Error sending email"});
+            return res.status(500).json({success:false, message:"Server Error"});
         }
     }
     catch(error){
         console.log(error);
-        return next(error);
+        return res.status(500).json({success:false, message:"Error resending verification email"});
     }
 });
 
@@ -280,7 +295,7 @@ router.post('/resend-verification', limiter, blockIfLoggedIn, async (req, res, n
 // and daily limit is not reached and last email sent was 2 minutes ago,
 // it generates a reset password token and sends it to the user's email
 // the user can then use this token to reset their password
-router.post('/forget-password', limiter, blockIfLoggedIn, async (req, res, next) => {
+router.post('/forget-password', limiter, blockIfLoggedIn, async (req, res) => {
     try{
         const email = req.body.email;
         if(!email) return res.status(400).json({success: false, message: "Please provide an email"});
@@ -327,7 +342,7 @@ router.post('/forget-password', limiter, blockIfLoggedIn, async (req, res, next)
     }
     catch(error){
         console.log(error);
-        return next(error);
+        return res.status(500).json({success:false, message:"Server Error"});
     }
 });
 
@@ -338,7 +353,7 @@ router.post('/forget-password', limiter, blockIfLoggedIn, async (req, res, next)
 // and clears the reset password token and its expiry time
 // finally it marks the user's email as verified (in case it was not already)
 // user must login again using the new password
-router.post('/reset-password/:token', blockIfLoggedIn, async (req, res, next) => {
+router.post('/reset-password/:token', blockIfLoggedIn, async (req, res) => {
     try{
         const token = req.params.token;
         const newPassword = req.body.password;
@@ -357,7 +372,7 @@ router.post('/reset-password/:token', blockIfLoggedIn, async (req, res, next) =>
     }
     catch(error){
         console.log(error);
-        return next(error);
+        return res.status(500).json({success:false, message:"Error resetting password"});
     }
 });
 

@@ -65,7 +65,7 @@ router.get("/:formId/table-structure", async (req, res) => {
 // sortBy: the field to sort by (default: createdAt)
 // sortOrder: 'asc' for ascending or 'desc' for descending (default: desc)
 // filter: string based on which data would be filtered, it is for global filtering across all columns
-router.use("/:formId/raw-data", async (req, res, next) => {
+router.use("/:formId/raw-data", async (req, res) => {
     try{
         // get formId from params, page, pageSize, sortBy, sortOrder and filter string from query params
         const {formId} = req.params;

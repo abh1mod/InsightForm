@@ -21,7 +21,7 @@ function isNumberBetween1And5(str) {
 
 // This route allows users to view a specific form by its ID.
 // It checks if the form is live and returns the form details i.e. title and questions.
-router.get("/viewForms/:formId", async (req, res,next) => {
+router.get("/viewForms/:formId", async (req, res) => {
     try{
         const formId = req.params.formId;
         const formData = await Form.findOne({_id: formId});
@@ -37,7 +37,7 @@ router.get("/viewForms/:formId", async (req, res,next) => {
     }
     catch(error){
         console.log(error);
-        return next(error);
+        return res.status(500).json({success:false, message:"Error fetching form"});
     }
 });
 
@@ -121,7 +121,7 @@ router.post("/submitResponse/:formId", limiter, async (req, res) => {
     }
     catch(error){
         console.log(error);
-        return next(error);
+        return res.status(500).json({success:false, message:"Error submitting response"});
     }
 });
 

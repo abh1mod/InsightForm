@@ -23,7 +23,8 @@ const userSchema = new mongoose.Schema({
             // Make password required only if the user is not signing up with Google.
             return !this.googleId;
         }, 'Password is required'],
-        minlength:[6,"Password must be 6 character long"]
+        minlength:[8,"Password must be at least 8 character long"],
+        match: [/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/, 'Must be 8+ chars, with uppercase, lowercase, digit & special char'],
     },
     googleId: {
         type: String,

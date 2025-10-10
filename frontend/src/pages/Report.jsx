@@ -9,6 +9,7 @@ const Report = () => {
     const { token, logout } = useAppContext();
     const { formID } = useParams();
     const [summarySuggestions, setSummarySuggestions] = useState({});
+    const [loading, setLoading] = useState({summarySuggestionsLoading: true, rawDataLoading: true, chartDataLoading: true});
 
     useEffect(() => {
         const fetchSummarySuggestions = async () => {
@@ -19,7 +20,7 @@ const Report = () => {
                     }
                 });
                 if(response.data.success){
-
+                    setSummarySuggestions({summary: response.data.report.summary, suggestions: response.data.report.suggestions});
                 }
                 else{
                     if(response.data.message === "invalid/expired token"){
@@ -28,14 +29,22 @@ const Report = () => {
                     }
                     else{
                         toast.error(response.data.message || "Failed to fetch report data.");
-
+                        setSummarySuggestions({summary: "", suggestions: []});
                     }
                 }
             }
-            catch{
-
+            catch(error){
+                console.log(error);
+                toast.error("Failed to fetch report data."); 
+            }
+            finally{
+                setLoading((prev) => {
+                    return {...prev, summarySuggestionsLoading: false};
+                });
             }
         }
+        fetchSummarySuggestions();
+
     }, []);
     const scrollToSlide = (targetIndex) => {
         const container = carouselRef.current;
