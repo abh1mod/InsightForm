@@ -13,7 +13,7 @@ const Report = () => {
     useEffect(() => {
         const fetchSummarySuggestions = async () => {
             try{
-                const response = await axios.get(`http://localhost:5000/api/report/${formID}/latest-report`, {
+                const response = await axios.get(`http://localhost:3000/api/report/${formID}/latest-report`, {
                     headers: {
                         Authorization: `Bearer ${token}`
                     }
@@ -28,7 +28,7 @@ const Report = () => {
                     }
                     else{
                         toast.error(response.data.message || "Failed to fetch report data.");
-                        
+
                     }
                 }
             }
