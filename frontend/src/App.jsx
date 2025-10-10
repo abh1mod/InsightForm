@@ -34,7 +34,7 @@ function App() {
           <Route path="/formcreate" element={<PrivateRoute><FormCreate /></PrivateRoute>} />
           <Route path="/formbuilder/:formID" element={<PrivateRoute><FormBuilder /></PrivateRoute>} />
           <Route path="/formsubmit/:formID" element={<FormSubmit />} />
-          <Route path "/report/:formID" element={<PrivateRoute><Report /></PrivateRoute>} />
+          <Route path="/report/:formID" element={<PrivateRoute><Report /></PrivateRoute>} />
 
         </Route>
       </Routes>
