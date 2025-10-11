@@ -24,8 +24,8 @@ router.get("/:formId/table-structure", async (req, res) => {
     try{
         const {formId} = req.params;
         // check if form exists and belongs to the user
-        const res = await Form.findOne({_id: formID, userId: req.user.id});
-        if(!res){
+        const resp = await Form.findOne({_id: formID, userId: req.user.id});
+        if(!resp){
             return res.status(404).json({success: false, message: "Form Not Found" });
         }
         // get all responses for the form
@@ -50,7 +50,7 @@ router.get("/:formId/table-structure", async (req, res) => {
     }
     catch(error){
         console.log(error);
-        res.json({success: false, message: "Error fetching table structure"});
+        res.status(400).json({success: false, message: "Error fetching table structure"});
     }
 });
 
@@ -75,8 +75,8 @@ router.use("/:formId/raw-data", async (req, res) => {
         const sortOrder = req.query.sortOrder === "asc" ? 1 : -1; // default sorting in descending order
         const filter = req.query.filter ? req.query.filter.toLowerCase() : null; // default no filter
         // check if form exists and belongs to the user
-        const res = await Form.findOne({_id: formId, userId: req.user.id});
-        if(!res){
+        const resp = await Form.findOne({_id: formId, userId: req.user.id});
+        if(!resp){
             return res.status(404).json({success: false, message: "Form Not Found" });
         }
         const queryOptions = {formId: formId};
@@ -109,7 +109,7 @@ router.use("/:formId/raw-data", async (req, res) => {
         return res.json({success: true, userResponses: rowData, pageCount: pageCount });
     }catch(error){
         console.log(error);
-        res.json({success: false, message: "Error fetching raw data" });
+        res.status(400).json({success: false, message: "Error fetching raw data" });
     }
 });
 
@@ -117,17 +117,17 @@ router.use("/:formId/raw-data", async (req, res) => {
 router.get("/:formId/latest-report", async (req, res) => {
     try{
         // check if form exists and belongs to the user and get the latest report (summary and suggestions) for that form
-        const res = await Report.findOne({_id: req.params.formId, userId: req.user.id}).sort({createdAt: -1}).select("summary suggestions");
-        if(!res){
+        const response = await Report.findOne({_id: req.params.formId, userId: req.user.id}).sort({createdAt: -1}).select("summary suggestions");
+        if(!response){
             // if no report found
-            return res.json({success: false, message: "No report found" });
+            return res.status(400).json({success: false, message: "No report found" });
         }
         // if report found, return the report
-        return res.json({success: true, report: res});
+        return res.json({success: true, report: response});
     }
     catch(error){
         console.log(error);
-        res.json({success: false, message: "Error fetching latest report" });
+        res.status(400).json({success: false, message: "Error fetching latest report" });
     }
 });
 
@@ -153,7 +153,7 @@ router.post("/:formId/generate-report", async (req, res) => {
         }
         // if report generation limit is reached, return an error
         if(form.reportGenerationLimit <= 0){
-            return res.json({success: false, message: "Report generation limit reached. Try again later."});
+            return res.status(400).json({success: false, message: "Report generation limit reached. Try again later."});
         }
         // check if there are new responses since the last report generation
         // if no new responses, return an error
@@ -161,12 +161,16 @@ router.post("/:formId/generate-report", async (req, res) => {
         const responseCount = await Response.countDocuments({formId: formId});
         const latestReport = await Report.findOne({formId: formId}).sort({createdAt: -1});
         if(latestReport && latestReport.responseCount === responseCount){
-            return res.json({sucess: false, message: "No new responses since last report generation"});
+            return res.status(400).json({sucess: false, message: "No new responses since last report generation"});
         }
         // get all responses for the form
         // preprocess the data to get aggregated information for each question
         // create a structured prompt using the form objective and the preprocessed data
         const allResponses = await Response.find({formId: formId}).select("responses -_id");
+        
+        if(!allResponses || allResponses.length === 0){
+            return res.status(400).json({success: false, message: "No responses found for this form"});
+        }
         const preProcessedData = dataPreProcessing(allResponses);
         const structuredPrompt = summaryAndSuggestionPrompt(form.objective, preProcessedData);
         // call the AI service with the structured prompt and the expected response schema
@@ -197,7 +201,7 @@ router.post("/:formId/generate-report", async (req, res) => {
     catch(error){
         await session.abortTransaction(); // abort the transaction in case of error
         console.log(error);
-        res.json({success: false, message: "Error generating report" });
+        res.status(404).json({success: false, message: "Error generating report" });
     }
     finally{
         session.endSession(); // end the mongoose session
@@ -210,8 +214,8 @@ router.post("/:formId/generate-report", async (req, res) => {
 router.get("/:formId/chart-data", async (req, res) => {
     try{
         const formId = req.params.formId;
-        const res = await Form.findOne({_id: formId, userId: req.user.id});
-        if(!res){
+        const resp = await Form.findOne({_id: formId, userId: req.user.id});
+        if(!resp){
             return res.status(404).json({success: false, message: "Form Not Found" });
         }
         const allResponses = await Response.find({formId: formId}).select("responses -_id");
@@ -221,7 +225,7 @@ router.get("/:formId/chart-data", async (req, res) => {
     }
     catch(error){
         console.log(error);
-        res.json({success: false, message: "Error fetching chart data" });
+        res.status(400).json({success: false, message: "Error fetching chart data" });
     }
 });
 
@@ -260,7 +264,7 @@ router.get("/:formId/download-data", async (req, res) => {
     }
     catch(error){
         console.log(error);
-        res.json({success: false, message: "Error downloading data" });
+        res.status(400).json({success: false, message: "Error downloading data" });
     }
 });
 

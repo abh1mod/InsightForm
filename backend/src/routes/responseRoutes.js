@@ -16,7 +16,7 @@ function isNumberBetween1And5(str) {
   // 2. Check if it's a valid number and within the range
   //    - !isNaN(num) checks if the string was a number at all.
   //    - num >= 1 && num <= 5 checks the range.
-  return !isNaN(num) && num >= 1 && num <= 5;
+  return !isNaN(num) && num > 0 && num <= 5;
 }
 
 // This route allows users to view a specific form by its ID.
@@ -55,13 +55,13 @@ router.post("/submitResponse/:formId", limiter, async (req, res) => {
         const responseData = req.body.responseData; // the response data from the user
         // if responseData is not present
         if(!responseData){
-            return res.json({sucess: false, message: 'No response Data'});
+            return res.status(400).json({sucess: false, message: 'No response Data'});
         }
         // if form requires authentication, check if userId is present in responseData and valid
         // also check if user has already submitted response to this form
         if(form.authRequired){
             if(!responseData.userId) {
-                return res.json({success: false, message: 'User ID is required'});
+                return res.status(400).json({success: false, message: 'User ID is required'});
             }
             const user = await User.findById(responseData.userId);
             if(!user){
@@ -111,6 +111,8 @@ router.post("/submitResponse/:formId", limiter, async (req, res) => {
         if(form.authRequired && form.isAnonymous){
             responseData.userId = null;
         }
+        // console.log(responseData.responses);
+        
         const response = new Response({
             formId: formId,
             userId: responseData.userId,

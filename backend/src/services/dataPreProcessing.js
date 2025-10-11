@@ -49,8 +49,8 @@ const dataPreProcessing = async (allResponses) => {
                         avgRating: 0, // Average rating calculated later
                         distribution: {
                             // Initialize count and percentage for ratings 1 to 5 to 0
-                            count: {"1": 0, "1.5": 0, "2": 0, "2.5": 0, "3": 0, "3.5": 0, "4": 0, "4.5": 0, "5": 0},
-                            percentage: {"1": 0, "1.5": 0, "2": 0, "2.5": 0, "3": 0, "3.5": 0, "4": 0, "4.5": 0, "5": 0}
+                            count: {"0.5": 0, "1": 0, "1.5": 0, "2": 0, "2.5": 0, "3": 0, "3.5": 0, "4": 0, "4.5": 0, "5": 0},
+                            percentage: {"0.5": 0, "1": 0, "1.5": 0, "2": 0, "2.5": 0, "3": 0, "3.5": 0, "4": 0, "4.5": 0, "5": 0}
                         }
                     };
                 }
@@ -64,6 +64,7 @@ const dataPreProcessing = async (allResponses) => {
                     };
                 }
             }
+            
             if(ans.answer.trim() === "") return; // skip empty answers
             processedData[key].totalResponses += 1; // increment total responses for this question
 

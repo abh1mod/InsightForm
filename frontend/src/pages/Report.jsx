@@ -1,14 +1,16 @@
 import { useRef, useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import {toast } from 'react-toastify';
+import NormalLoader from "../components/NormalLoader";
 import { useAppContext } from '../context/ContextAPI';
 import axios from "axios";
 
 const Report = () => {
     const carouselRef = useRef(null);
     const { token, logout } = useAppContext();
+    const [newReportLoading, setNewReportLoading] = useState(false);
     const { formID } = useParams();
-    const [summarySuggestions, setSummarySuggestions] = useState({});
+    const [summarySuggestions, setSummarySuggestions] = useState({summary: "", suggestions: []});
     const [loading, setLoading] = useState({summarySuggestionsLoading: true, rawDataLoading: true, chartDataLoading: true});
 
     useEffect(() => {
@@ -22,20 +24,21 @@ const Report = () => {
                 if(response.data.success){
                     setSummarySuggestions({summary: response.data.report.summary, suggestions: response.data.report.suggestions});
                 }
-                else{
-                    if(response.data.message === "invalid/expired token"){
+            }
+            catch(error){
+                console.log(error);
+                if(error.response){
+                    if(error.response.data.message === "invalid/expired token"){
                         toast.error("Session expired. Please log in again.");
                         logout();
                     }
                     else{
-                        toast.error(response.data.message || "Failed to fetch report data.");
                         setSummarySuggestions({summary: "", suggestions: []});
                     }
                 }
-            }
-            catch(error){
-                console.log(error);
-                toast.error("Failed to fetch report data."); 
+                else{
+                    toast.error("Failed to fetch latest report");
+                }
             }
             finally{
                 setLoading((prev) => {
@@ -46,6 +49,46 @@ const Report = () => {
         fetchSummarySuggestions();
 
     }, []);
+    
+    async function generateReport(){
+        try{
+            setNewReportLoading(true);
+            setLoading((prev) => {
+                return {...prev, summarySuggestionsLoading: true};
+            });
+            const response = await axios.post(`http://localhost:3000/api/report/${formID}/generate-report`, {}, {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                });
+            if(response.data.success){
+                toast.success(response.data.message || "Report generated successfully");
+                setSummarySuggestions({summary: response.data.report.summary, suggestions: response.data.report.suggestions});
+            }
+        }
+        catch(error){
+            console.log(error);
+            if(error.response){
+                if(error.response.data.message === "invalid/expired token"){
+                    toast.error("Session expired. Please log in again.");
+                    logout();
+                }
+                else{
+                    toast.error(error.response.data.message || "Failed to generate report");
+                }
+            }
+            else{
+                toast.error("Failed to generate report");
+            }
+        }
+        finally{
+            setNewReportLoading(false);
+            setLoading((prev) => {
+                return {...prev, summarySuggestionsLoading: false};
+            });
+        }
+    }
+
     const scrollToSlide = (targetIndex) => {
         const container = carouselRef.current;
         if (!container) return;
@@ -91,39 +134,57 @@ const Report = () => {
                         <h2 className="text-xl font-semibold text-gray-900">Summary & Suggestions</h2>
                         <p className="text-sm text-gray-500">High-level takeaways and recommended actions</p>
                     </div>
-                    <button className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-white text-sm font-medium hover:bg-indigo-700 active:bg-indigo-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                    <button onClick={generateReport} disabled={newReportLoading} className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-white text-sm font-medium hover:bg-indigo-700 active:bg-indigo-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:bg-indigo-300 disabled:opacity-75 disabled:cursor-not-allowed">
                         <span>New Report</span>
                     </button>
                 </div>
                 <div className="p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-                    <div className="rounded-md border border-gray-200 p-4">
-                        <h3 className="text-sm font-medium text-gray-900">Summary</h3>
-                        <ul className="mt-2 list-disc pl-5 text-sm text-gray-600 space-y-1">
-                            <li>Overall sentiment trends positive over the last two weeks</li>
-                            <li>Higher engagement on mobile compared to desktop</li>
-                            <li>Drop-offs concentrated around longer open-ended questions</li>
-                        </ul>
-                    </div>
-                    <div className="rounded-md border border-gray-200 p-4">
-                        <div className="flex items-center justify-between">
-                            <h3 className="text-sm font-medium text-gray-900">Suggestions</h3>
-                            <span className="text-xs text-gray-500">From SuggestionSchema</span>
+                    <div className="rounded-md border border-gray-200 p-4 h-[15rem] overflow-y-auto">
+        
+                        {loading.summarySuggestionsLoading ?
+                        <div class = "flex justify-center items-center h-full">
+                            <NormalLoader /> 
+                        </div> :
+                        summarySuggestions.summary === "" ?
+                        <div class = "flex justify-center items-center h-full">
+                            <p className="mt-2 pl-5 text-sm text-gray-600">No summary available.</p> 
+                        </div>:
+                        <div>
+                            <h3 className="text-sm font-medium text-gray-900">Summary</h3>
+                            <p className="mt-2 pl-5 text-sm text-gray-600">
+                                {summarySuggestions.summary || "No summary available."}
+                            </p>
                         </div>
-                        <ul className="mt-2 space-y-3">
-                            {[{ title: 'Shorten Q5', detail: 'Reduce description length to lower cognitive load.', suggestionType: 'action' }, { title: 'Reorder demographics', detail: 'Place demographic questions at the end to improve flow.', suggestionType: 'insight' }, { title: 'Add tooltips', detail: 'Help texts for matrix questions to clarify choices.', suggestionType: 'warning' }].map((s, idx) => (
-                                <li key={idx} className="border border-gray-200 rounded-md p-3">
-                                    <div className="flex items-start justify-between">
-                                        <div>
-                                            <p className="text-sm font-medium text-gray-900">{s.title}</p>
-                                            <p className="mt-1 text-sm text-gray-700">{s.detail}</p>
+                        }
+                    </div>
+                    <div className="rounded-md border border-gray-200 p-4 h-[15rem] overflow-y-auto">
+                        {loading.summarySuggestionsLoading ? 
+                        <div class = "flex justify-center items-center h-full">
+                            <NormalLoader /> 
+                        </div>: 
+                        summarySuggestions.suggestions.length === 0 ? 
+                        <div class = "flex justify-center items-center h-full">
+                            <p className="mt-2 pl-5 text-sm text-gray-600">No suggestions available.</p> 
+                        </div>:
+                        <div>
+                            <h3 className="text-sm font-medium text-gray-900">Suggestions</h3>
+                            <ul className="mt-2 space-y-3">
+                                {summarySuggestions.suggestions.map((s, idx) => (
+                                    <li key={idx} className="border border-gray-200 rounded-md p-3">
+                                        <div className="flex items-start justify-between">
+                                            <div>
+                                                <p className="text-sm font-medium text-gray-900">{s.title}</p>
+                                                <p className="mt-1 text-sm text-gray-700">{s.detail}</p>
+                                            </div>
+                                            <span className={`ml-3 shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${s.suggestionType === 'action' ? 'bg-emerald-100 text-emerald-700' : s.suggestionType === 'warning' ? 'bg-amber-100 text-amber-700' : 'bg-indigo-100 text-indigo-700' }`}>
+                                                {s.suggestionType}
+                                            </span>
                                         </div>
-                                        <span className={`ml-3 shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${s.suggestionType === 'action' ? 'bg-emerald-100 text-emerald-700' : s.suggestionType === 'warning' ? 'bg-amber-100 text-amber-700' : 'bg-indigo-100 text-indigo-700' }`}>
-                                            {s.suggestionType}
-                                        </span>
-                                    </div>
-                                </li>
-                            ))}
-                        </ul>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                        }
                     </div>
                 </div>
             </div>

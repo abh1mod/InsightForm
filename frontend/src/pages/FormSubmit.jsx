@@ -165,8 +165,10 @@ useEffect(() => {
       responseData: {
         userId: userId ? userId.toString() : null,
         responses: form.questions.map((q) => ({
-        questionId: q._id,
+          questionId: q._id,
+          questionText: q.questionText,
           questionType: q.questionType,
+          options: q.questionType === "mcq" ? q.options : [],
           answer: String(responses[q._id] || "").trim(),
         })),
       },
