@@ -93,7 +93,7 @@ router.post("/userForms", async (req, res, next) => {
 // This route allows the authenticated user to update an existing form by its ID.
 // this route will expect the react state object of the form to be sent in the body which is of same structure as the Form model.
 // It updates the form with the provided data and returns the status of the operation.
-router.patch("/userForms/:formId", async (req, res,next) => {
+router.patch("/userForms/:formId", async (req, res, next) => {
     try{
         const formBody = req.body.formBody; // The form data to be updated
         const formId = req.params.formId; // The ID of the form to be updated

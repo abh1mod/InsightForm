@@ -9,26 +9,31 @@ const router = express.Router();
 router.use(express.json());
 router.use(express.urlencoded({ extended: true }));
 
-function isNumberBetween1And10(str) {
+function isNumberBetween1And5(str) {
   // 1. Convert the string to a number
   const num = Number(str);
 
   // 2. Check if it's a valid number and within the range
   //    - !isNaN(num) checks if the string was a number at all.
-  //    - num >= 1 && num <= 10 checks the range.
-  return !isNaN(num) && num >= 1 && num <= 10;
+  //    - num >= 1 && num <= 5 checks the range.
+  return !isNaN(num) && num >= 1 && num <= 5;
 }
 
 // This route allows users to view a specific form by its ID.
 // It checks if the form is live and returns the form details i.e. title and questions.
-router.get("/viewForms/:formId", async (req, res) => {
+router.get("/viewForms/:formId", async (req, res,next) => {
     try{
         const formId = req.params.formId;
-        const formData = await Form.findOne({_id: formId, isLive: true}).select("title questions");
+        const formData = await Form.findOne({_id: formId});
+        // if formId is not valid
         if(!formData){
             return res.status(404).json({success: false, message: "Form Not Found"});
         }
-        return res.json({success: true, form: formData});
+        // if form is not live
+        if(formData && !formData.isLive){
+            return res.status(403).json({success: false, message: "Form is not live"});
+        }
+        return res.json({success: true, form: {title : formData.title, description: formData.description, questions: formData.questions, authRequired : formData.authRequired}}); // return only title, description and questions
     }
     catch(error){
         console.log(error);
@@ -79,7 +84,7 @@ router.post("/submitResponse/:formId", limiter, async (req, res) => {
             const question = form.questions[i];
             const answer = responseData.responses[i];
             // check if questionId and questionType match
-            if(question._id !== answer.questionId){
+            if(question._id.toString() !== answer.questionId.toString()){
                 return res.status(400).json({success: false, message: 'Question id mismatch for question', questionId: answer.questionId});
             }
             if(question.questionType !== answer.questionType){
@@ -92,13 +97,13 @@ router.post("/submitResponse/:formId", limiter, async (req, res) => {
             // if question is MCQ then check if answer is one of the options
             // if question is rating then check if answer is a number between 1 and 10
             // if question is short_answer then check if answer is not empty
-            if(answer.questionType === "MCQ" && !question.options.includes(answer.answer)){
+            if(answer.questionType === "mcq" && !question.options.includes(answer.answer)){
                 return res.status(400).json({success: false, message: 'not correct response', questionId: answer.questionId});
             }
-            else if(answer.questionType === "rating" && isNumberBetween1And10(answer.answer) === false){
+            else if(answer.questionType === "rating" && isNumberBetween1And5(answer.answer) === false){
                 return res.status(400).json({success: false, message: 'not correct response', questionId: answer.questionId});
             }
-            else if(answer.questionType === "short_answer" && answerText.length === 0){
+            else if(answer.questionType === "text" && answerText.length === 0){
                 return res.status(400).json({success: false, message: 'not correct response', questionId: answer.questionId});
             }
         }

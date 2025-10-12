@@ -18,7 +18,7 @@ const AutoResizeTextarea = ({ value, onChange, placeholder }) => {
       placeholder={placeholder}
       rows={1} // start with 1 line
       className="flex-1 text-lg font-semibold text-gray-800 ml-2 p-1
-                 border-b border-gray-300 focus:outline-none focus:border-blue-500
+                 border-b border-gray-200 focus:outline-none focus:border-blue-500
                  transition-colors duration-200 bg-transparent resize-none overflow-hidden"
     />
   );

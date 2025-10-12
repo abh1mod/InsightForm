@@ -48,9 +48,9 @@ const dataPreProcessing = async (allResponses) => {
                         totalResponses: 0, // Total number of responses received for this question
                         avgRating: 0, // Average rating calculated later
                         distribution: {
-                            // Initialize count and percentage for ratings 1 to 10 to 0
-                            count: {"1": 0, "2": 0, "3": 0, "4": 0, "5": 0, "6": 0, "7": 0, "8": 0, "9": 0, "10": 0},
-                            percentage: {"1": 0, "2": 0, "3": 0, "4": 0, "5": 0, "6": 0, "7": 0, "8": 0, "9": 0, "10": 0}
+                            // Initialize count and percentage for ratings 1 to 5 to 0
+                            count: {"1": 0, "1.5": 0, "2": 0, "2.5": 0, "3": 0, "3.5": 0, "4": 0, "4.5": 0, "5": 0},
+                            percentage: {"1": 0, "1.5": 0, "2": 0, "2.5": 0, "3": 0, "3.5": 0, "4": 0, "4.5": 0, "5": 0}
                         }
                     };
                 }

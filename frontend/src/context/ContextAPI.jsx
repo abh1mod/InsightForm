@@ -29,7 +29,6 @@ export const ContextProvider = ({ children }) => {
     } else {
       root.classList.remove("dark");
     }
-    console.log(token);
   }, [theme]);
 
   const login = (newToken) => setToken(newToken);

@@ -6,6 +6,7 @@ import { useAppContext } from '../context/ContextAPI';
 import useDebounce from '../debounceHook/useDebounce';
 import AutoResizeTextarea from '../components/AutoResizeTextarea';
 import HamsterLoader from '../components/HamsterLoader';
+import { useNavigate } from 'react-router-dom';
 
 import {
   PlusIcon,
@@ -47,6 +48,8 @@ const FormBuilder = () => {
   // State for questions (example: one Multiple Choice question)
   const [questions, setQuestions] = useState([]);
 
+  const navigate = useNavigate(); 
+
   const firstRender = (fetchedForm) => {
     if (fetchedForm) {
       setFormTitle(fetchedForm.title || 'Untitled Form');
@@ -82,7 +85,7 @@ const FormBuilder = () => {
   }
   }, [formID]);
 
-  const debouncedFormState = useDebounce(formState, 2000);
+  const debouncedFormState = useDebounce(formState, 500);
 
   useEffect(() => {
     if (debouncedFormState) {
@@ -204,7 +207,7 @@ const addOptionToQuestion = (qIndex) => {
     );
 
     if (res.data.success) {
-      console.log("AI Suggestions:", res.data.suggestions);
+      toast.success("Questions Loaded Successfully");
       setQuestions((prev) => [...prev, ...res.data.suggestions]);
     } else {
       toast.error(res.data.message || "Failed to generate questions");
@@ -216,12 +219,14 @@ const addOptionToQuestion = (qIndex) => {
   }
 };
 
+  useEffect(() => {
+    if(loading) document.body.style.overflow = "hidden";
+    else document.body.style.overflow = "auto";
+  },[loading]);
 
   return (
     <div >
-      {loading ? (
-        <HamsterLoader />
-      ) : (
+      {loading && <HamsterLoader />}
 
         <div className="min-h-screen flex font-sans relative ">
       {/* Fixed Left Sidebar - Add Question */}
@@ -299,10 +304,18 @@ const addOptionToQuestion = (qIndex) => {
 
     {/* Actions */}
     <div className="flex items-center space-x-3">
-      <button className="flex items-center text-sm text-gray-600 hover:text-blue-600 transition-colors px-2.5 py-1.5 rounded-lg bg-gray-50 hover:bg-blue-50">
+      <button
+        onClick={() => navigate(`/formsubmit/${formID.formID}`, { state: { isPreview: true }})}
+
+       className="flex items-center text-sm text-gray-600 hover:text-blue-600 transition-colors px-2.5 py-1.5 rounded-lg bg-gray-50 hover:bg-blue-50">
         <EyeIcon className="w-4 h-4 mr-1.5" /> Preview
       </button>
-      <button className="flex items-center text-sm text-gray-600 hover:text-blue-600 transition-colors px-2.5 py-1.5 rounded-lg bg-gray-50 hover:bg-blue-50">
+      <button
+        onClick={() => {
+          navigator.clipboard.writeText(`http://localhost:5000/formsubmit/${formID.formID}`);
+          toast.success("Form link copied to clipboard");
+        }}
+       className="flex items-center text-sm text-gray-600 hover:text-blue-600 transition-colors px-2.5 py-1.5 rounded-lg bg-gray-50 hover:bg-blue-50">
         <LinkIcon className="w-4 h-4 mr-1.5" /> Copy Link
       </button>
     </div>
@@ -353,13 +366,9 @@ const addOptionToQuestion = (qIndex) => {
             {renderQuestionIcon(question.questionType)}
 
             <AutoResizeTextarea
-              type="text"
               value={question.questionText}
               onChange={(e) => handleQuestionTextChange(index, e.target.value)}
               placeholder="Enter your question"
-              className="flex-1 text-lg font-semibold text-gray-800 ml-2 p-1
-                        border-b border-gray-300 focus:outline-none focus:border-blue-500 
-                        transition-colors duration-200 bg-transparent "
             />
           </div>
 
@@ -405,10 +414,10 @@ const addOptionToQuestion = (qIndex) => {
 
                 {/* Placeholder for other question types */}
                 {( question.questionType === 'text') && (
-                  <div className="mt-4 ml-6"><input type="text" placeholder="User will enter text here..." disabled className="w-full p-2 border-b border-gray-300 rounded-md bg-gray-50 text-gray-500 italic" /></div>
+                  <div className="mt-4 ml-6"><input type="text" placeholder="User will enter text here..." disabled className="w-full p-2 border-b border-gray-200 rounded-md bg-gray-50 text-gray-500 italic" /></div>
                 )}
                 {( question.questionType === 'rating') && (
-                  <div className="mt-4 ml-6"><input type="text" placeholder="User will provide rating out of 10" disabled className="w-full p-2 border-b border-gray-300 rounded-md bg-gray-50 text-gray-500 italic" /></div>
+                  <div className="mt-4 ml-6"><input type="text" placeholder="User will provide rating " disabled className="w-full p-2 border-b border-gray-200 rounded-md bg-gray-50 text-gray-500 italic" /></div>
                 )}
               </div>
             ))
@@ -427,11 +436,11 @@ const addOptionToQuestion = (qIndex) => {
       </button>
 
     </div>
-      )}
+     
     </div>
 
 
-    
+
   );
 };
 
