@@ -16,4 +16,6 @@ const ReportSchema = new mongoose.Schema({
   suggestions: [SuggestionSchema], // Array of suggestions based on the responses
 }, { timestamps: true });
 
+const Report = mongoose.model('Report', ReportSchema);
+
 export default Report;

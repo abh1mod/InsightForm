@@ -135,7 +135,7 @@ router.post("/submitResponse/:formId", limiter, async (req, res) => {
         // console.log(responseData.responses);
         const response = new Response({
             formId: formId,
-            userId: responseData.userId ? responseData.userId : null,
+            userId: form.isAnonymous ? null : responseData.userId ? responseData.userId : null,
             responses: responseData.responses
         });
         session.startTransaction();
