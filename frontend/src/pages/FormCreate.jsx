@@ -17,6 +17,19 @@ const FormCreate = () => {
     return () => clearTimeout(timer); // Cleanup timer on unmount
   }, []);
 
+  // Broadcast util: notify other tabs about created form
+  const broadcastCreated = (formId, title) => {
+    try {
+      const ch = new BroadcastChannel('insightform');
+      ch.postMessage({ type: 'FORM_CREATED', payload: { formId, title } });
+      ch.close();
+    } catch {}
+    // Fallback via localStorage event for browsers without BroadcastChannel
+    try {
+      localStorage.setItem('insightform:event', JSON.stringify({ type: 'FORM_CREATED', payload: { formId, title } }));
+    } catch {}
+  };
+
   // Handles the form submission
   const handleCreateForm = async(e) => {
     e.preventDefault(); // Prevent page reload
@@ -43,10 +56,18 @@ const FormCreate = () => {
         if(res.data.success){
             console.log("Form Created with ID:", res.data);
             toast.success("Form Created Successfully");
+            // Broadcast creation so Dashboard updates live
+            broadcastCreated(res.data.formId, title);
             navigate("/formbuilder/" + res.data.formId);
         }
     }catch(err){
         console.log(err);
+        if (err.response?.data?.message === "invalid/expired token") {
+            toast.error("Your session has expired. Please log in again.");
+            navigate("/login");
+            return;
+        }
+        toast.error(err.response?.data?.message || "Failed to create form");
     }
   };
 

@@ -4,6 +4,9 @@ import passport from "passport";
 import { Strategy as JwtStrategy, ExtractJwt } from 'passport-jwt';
 import User from "../models/user.model.js";
 
+console.log(process.env.SECRET_KEY);
+
+
 const opts = {
     // Tell Passport to extract the JWT from the 'Authorization: Bearer <token>' header
     jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),

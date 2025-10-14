@@ -1,3 +1,50 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Adjust floating action buttons layout for short viewports */
+@media (max-height: 800px) {
+    .fab-container {
+        right: 0.75rem;
+        /* keep near edge */
+        bottom: 1rem;
+        /* slightly lower to avoid overlapping list actions */
+        flex-direction: row;
+        /* side by side */
+        gap: 0.75rem;
+    }
+
+    /* Constrain each wrapper so expanding buttons don't overflow off-screen */
+    .fab-wrapper {
+        width: 10rem;
+        height: 3.5rem;
+    }
+}
+
+/* Prevent layout shift when vertical scrollbars appear on some pages */
+html {
+    scrollbar-gutter: stable both-edges;
+}
+
+/* Dashboard list: keep scrollbar visible and clear of floating buttons */
+.dashboard-list {
+    scrollbar-gutter: stable both-edges;
+    padding-bottom: 6rem;
+    /* keeps last card above FABs */
+}
+
+/* Short viewports: compact FABs side-by-side → smaller right buffer */
+@media (max-height: 799px) {
+    .dashboard-list {
+        padding-right: 4.5rem;
+        /* ~3.5rem button + gap */
+    }
+}
+
+/* Tall viewports: stacked, hover-expand FABs → larger right buffer */
+@media (min-height: 800px) {
+    .dashboard-list {
+        padding-right: 12rem;
+        /* room for expanded hover width */
+    }
+}
