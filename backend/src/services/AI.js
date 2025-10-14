@@ -17,6 +17,8 @@ const questionSuggestionPrompt = (objective, neededQuestionData) => {
                     Task:
                     Based on the objective and existing questions, suggest 3 new, relevant, and distinct questions to add to the form.
         `;
+    console.log(text);
+    
     return text;
 }
 
@@ -24,6 +26,8 @@ const questionSuggestionPrompt = (objective, neededQuestionData) => {
 // It takes the form's objective and pre-processed response data as input
 // It returns a structured prompt string that guides the AI to generate a summary and actionable suggestions
 const summaryAndSuggestionPrompt = (objective, responseData) => {
+    // console.log(responseData);
+    
     const text = `
                     Objective:
                     ${objective}
@@ -35,6 +39,8 @@ const summaryAndSuggestionPrompt = (objective, responseData) => {
                     1. Provide a concise summary of the overall responses.
                     2. Suggest 3 to 5 actionable suggestions based on the summarized data.
                     `
+    // console.log(text);
+    
     return text;
 }
 

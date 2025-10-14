@@ -117,7 +117,9 @@ router.use("/:formId/raw-data", async (req, res) => {
 router.get("/:formId/latest-report", async (req, res) => {
     try{
         // check if form exists and belongs to the user and get the latest report (summary and suggestions) for that form
-        const response = await Report.findOne({_id: req.params.formId, userId: req.user.id}).sort({createdAt: -1}).select("summary suggestions");
+        const response = await Report.findOne({formId: req.params.formId, userId: req.user.id}).sort({createdAt: -1}).select("summary suggestions");
+        // console.log(response);
+        
         if(!response){
             // if no report found
             return res.status(400).json({success: false, message: "No report found" });
@@ -155,13 +157,10 @@ router.post("/:formId/generate-report", async (req, res) => {
         if(form.reportGenerationLimit <= 0){
             return res.status(400).json({success: false, message: "Report generation limit reached. Try again later."});
         }
-        // check if there are new responses since the last report generation
-        // if no new responses, return an error
-        // else proceed to generate the report
-        const responseCount = await Response.countDocuments({formId: formId});
+        // If a report exists and it was created after the last modification, then there's no new data.
         const latestReport = await Report.findOne({formId: formId}).sort({createdAt: -1});
-        if(latestReport && latestReport.responseCount === responseCount){
-            return res.status(400).json({sucess: false, message: "No new responses since last report generation"});
+        if(latestReport && latestReport.createdAt >= form.lastEdited){
+            return res.status(400).json({sucess: false, message: "No change in responses since last report generation"});
         }
         // get all responses for the form
         // preprocess the data to get aggregated information for each question
@@ -171,7 +170,7 @@ router.post("/:formId/generate-report", async (req, res) => {
         if(!allResponses || allResponses.length === 0){
             return res.status(400).json({success: false, message: "No responses found for this form"});
         }
-        const preProcessedData = dataPreProcessing(allResponses);
+        const preProcessedData = await dataPreProcessing(allResponses);
         const structuredPrompt = summaryAndSuggestionPrompt(form.objective, preProcessedData);
         // call the AI service with the structured prompt and the expected response schema
         const aiResponse = await generateReport(structuredPrompt, summaryAndSuggestionResponseSchema);
@@ -185,7 +184,7 @@ router.post("/:formId/generate-report", async (req, res) => {
         const newReport = new Report({
             formId: form._id,
             userId: req.user.id,
-            responseCount: responseCount,
+            latestResponseId: latestResponseID._id.toString(),
             summary: aiResponseData.summary,
             suggestions: aiResponseData.suggestions
         });
@@ -219,8 +218,13 @@ router.get("/:formId/chart-data", async (req, res) => {
             return res.status(404).json({success: false, message: "Form Not Found" });
         }
         const allResponses = await Response.find({formId: formId}).select("responses -_id");
-        const preProcessedData = dataPreProcessing(allResponses);
-        const chartData = textQuestionPreProcessing(preProcessedData);
+        if(!allResponses || allResponses.length === 0){
+            return res.status(400).json({success: false, message: "No responses found for this form"});
+        }
+        const preProcessedData = await dataPreProcessing(allResponses);
+        const chartData = await textQuestionPreProcessing(preProcessedData);
+        // console.log(chartData);
+        
         return res.json({success: true, chartData: chartData});
     }
     catch(error){

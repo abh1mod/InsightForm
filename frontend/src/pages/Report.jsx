@@ -1,14 +1,38 @@
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import {toast } from 'react-toastify';
 import NormalLoader from "../components/NormalLoader";
 import { useAppContext } from '../context/ContextAPI';
 import axios from "axios";
+import Bubble from "../components/bubble";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+} from 'chart.js';
+import { Bar } from 'react-chartjs-2';
+
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend
+);
+
+const ratingLabels = ["0.5", "1", "1.5", "2", "2.5", "3", "3.5", "4", "4.5", "5"];
 
 const Report = () => {
     const carouselRef = useRef(null);
     const { token, logout } = useAppContext();
     const [newReportLoading, setNewReportLoading] = useState(false);
+    const [chartData, setChartData] = useState([]);
     const { formID } = useParams();
     const [summarySuggestions, setSummarySuggestions] = useState({summary: "", suggestions: []});
     const [loading, setLoading] = useState({summarySuggestionsLoading: true, rawDataLoading: true, chartDataLoading: true});
@@ -28,12 +52,12 @@ const Report = () => {
             catch(error){
                 console.log(error);
                 if(error.response){
-                    if(error.response.data.message === "invalid/expired token"){
+                    if(error.response.data.message === "invalid/expired token" && token){
                         toast.error("Session expired. Please log in again.");
                         logout();
                     }
                     else{
-                        setSummarySuggestions({summary: "", suggestions: []});
+                        toast.error(error.response.data.message || "Failed to fetch latest report");
                     }
                 }
                 else{
@@ -46,8 +70,44 @@ const Report = () => {
                 });
             }
         }
-        fetchSummarySuggestions();
 
+        const fetchChartData = async () => {
+            try{
+                const response = await axios.get(`http://localhost:3000/api/report/${formID}/chart-data`, {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                });
+                if(response.data.success){
+                    console.log(response);
+                    
+                    setChartData(response.data.chartData);
+                }
+            }
+            catch(error){
+                console.log(error);
+                if(error.response){
+                    if(error.response.data.message === "invalid/expired token" && token){
+                        toast.error("Session expired. Please log in again.");
+                        logout();
+                    }
+                    else{
+                        toast.error(error.response.data.message || "Failed to fetch chart data");
+                    }
+                }
+                else{
+                    toast.error("Failed to fetch chart data");
+                }
+            }
+            finally{
+                setLoading((prev) => {
+                    return {...prev, chartDataLoading: false};
+                });
+            }
+        }
+
+        fetchSummarySuggestions();
+        fetchChartData();
     }, []);
     
     async function generateReport(){
@@ -69,7 +129,7 @@ const Report = () => {
         catch(error){
             console.log(error);
             if(error.response){
-                if(error.response.data.message === "invalid/expired token"){
+                if(error.response.data.message === "invalid/expired token" && token){
                     toast.error("Session expired. Please log in again.");
                     logout();
                 }
@@ -88,6 +148,66 @@ const Report = () => {
             });
         }
     }
+
+    var chartDataMemo = useMemo(() => {
+        return Object.keys(chartData).map((question) => {
+            if(chartData[question].questionType === 'text'){
+                return {words: chartData[question].distribution, questionType: chartData[question].questionType, questionText: chartData[question].questionText};
+            }
+            else if(chartData[question].questionType === 'mcq'){
+                return {
+                    questionType: chartData[question].questionType,
+                    chartOptions: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                            position: 'top',
+                            },
+                            title: {
+                            display: true,
+                            text: chartData[question].questionText,
+                            }
+                        },
+                        maintainAspectRatio: false
+                    },
+                    data: {
+                        labels: Object.keys(chartData[question].distribution.count),
+                        datasets: [{
+                            label: "Responses",
+                            data: Object.values(chartData[question].distribution.count),
+                            backgroundColor: 'rgba(255, 159, 64, 0.6)'
+                        }]
+                    }
+                }
+            }
+            else if(chartData[question].questionType === 'rating'){
+                return {
+                    questionType: chartData[question].questionType,
+                    chartOptions: {
+                        maintainAspectRatio: false,
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                            position: 'top',
+                            },
+                            title: {
+                            display: true,
+                            text: chartData[question].questionText,
+                            }
+                        },
+                    },
+                    data: {
+                        labels: ratingLabels,
+                        datasets: [{
+                            label: "Responses",
+                            data: ratingLabels.map((l) => chartData[question].distribution.count[l]),
+                            backgroundColor: 'rgba(255, 159, 64, 0.6)'
+                        }]
+                    }
+                }
+            }
+        });
+    }, [chartData]);
 
     const scrollToSlide = (targetIndex) => {
         const container = carouselRef.current;
@@ -273,55 +393,37 @@ const Report = () => {
             {/* Section 3: Charts Carousel (CSS scroll-snap) */}
             <div className="bg-white rounded-lg shadow border border-gray-200">
                 <div className="p-4 sm:p-6 border-b border-gray-100">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h2 className="text-xl font-semibold text-gray-900">Question Insights</h2>
-                            <p className="text-sm text-gray-500">Swipe or scroll horizontally to view charts</p>
-                        </div>
-                        <div className="hidden sm:flex items-center gap-2">
-                            {Array.from({ length: 6 }).map((_, idx) => (
-                                <a key={idx} href={`#slide-${idx + 1}`} className={`h-2 w-2 rounded-full ${idx === 0 ? 'bg-indigo-600' : 'bg-gray-300'} hover:bg-indigo-500`} aria-label={`Go to slide ${idx + 1}`}></a>
-                            ))}
-                        </div>
-                    </div>
+                    <h2 className="text-xl font-semibold text-gray-900">Question Insights</h2>
+                    <p className="text-sm text-gray-500">Swipe or scroll horizontally to view charts</p>
                 </div>
+                {loading.chartDataLoading ?
+                <div className = "flex justify-center items-center h-[15rem]">
+                    <NormalLoader />
+                </div> : chartDataMemo.length === 0 ?
+                <div className = "flex justify-center items-center h-[15rem]">
+                    <p className="mt-2 pl-5 text-sm text-gray-600">No chart data available.</p> 
+                </div> :
                 <div className="p-4 sm:p-6">
                     <div ref={carouselRef} className="relative overflow-x-auto snap-x snap-mandatory scroll-smooth [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                         <div className="flex gap-4">
-                            {[1, 2, 3, 4, 5, 6].map((i) => (
-                                <div id={`slide-${i}`} data-slide="true" key={i} className="snap-center shrink-0 w-full max-w-[100%] rounded-md border border-gray-200 p-4">
-                                    <div className="flex items-center justify-between mb-3">
-                                        <h3 className="text-sm font-medium text-gray-900">Q{i} - Sample Chart</h3>
-                                        <span className="text-xs text-gray-500">Bar</span>
-                                    </div>
-                                    <div className="h-40 flex items-end gap-2">
-                                        {[40, 72, 55, 20, 90].map((h, idx) => (
-                                            <div key={idx} className="flex-1 bg-indigo-200 rounded-sm relative">
-                                                <div style={{ height: `${h}%` }} className="absolute bottom-0 left-0 right-0 bg-indigo-600 rounded-sm"></div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                    <div className="mt-3 flex justify-between text-xs text-gray-500">
-                                        <span>A</span>
-                                        <span>B</span>
-                                        <span>C</span>
-                                        <span>D</span>
-                                        <span>E</span>
+                            {chartDataMemo.map((item, i) => (
+                                <div id={`slide-${i}`} data-slide="true" key={i} className="relative snap-center shrink-0 w-full max-w-[100%] rounded-md border border-gray-200 p-4 h-[40rem]">
+                                    <div className="absolute top-0 left-0 w-full h-full">
+                                        {item.questionType === 'mcq' || item.questionType === 'rating'? 
+                                            <Bar options={item.chartOptions} data={item.data}/> :
+                                            <Bubble data={item.words} title={item.questionText}/>
+                                        }
                                     </div>
                                 </div>
                             ))}
-                        </div>
+                        </div>  
                     </div>
-                    <div className="mt-4 flex items-center justify-between gap-4">
+                    <div className="mt-4 flex items-center justify-center gap-4">
                         <button onClick={handlePrev} className="inline-flex items-center rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">Prev</button>
-                        <div className="flex items-center justify-center gap-2">
-                            {Array.from({ length: 6 }).map((_, idx) => (
-                                <a key={idx} href={`#slide-${idx + 1}`} className={`h-2 w-2 rounded-full ${idx === 0 ? 'bg-indigo-600' : 'bg-gray-300'} hover:bg-indigo-500`} aria-label={`Go to slide ${idx + 1}`}></a>
-                            ))}
-                        </div>
                         <button onClick={handleNext} className="inline-flex items-center rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">Next</button>
                     </div>
                 </div>
+                }
             </div>
         </div>
     );

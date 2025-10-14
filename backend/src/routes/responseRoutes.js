@@ -45,6 +45,7 @@ router.get("/viewForms/:formId", async (req, res) => {
 // It expects the form ID in the URL and the response data in the request body.
 // responseData should be the same as the structure defined in response.model.js
 router.post("/submitResponse/:formId", limiter, async (req, res) => {
+    const session = await mongoose.startSession();
     try{
         const formId = req.params.formId; // the form ID from the URL
         // if formId is not valid or not live
@@ -118,12 +119,20 @@ router.post("/submitResponse/:formId", limiter, async (req, res) => {
             userId: responseData.userId,
             responses: responseData.responses
         });
+        session.startTransaction();
         await response.save();
+        // update the lastEdited field of the form to current date and time
+        await form.findByIdAndUpdate(formId, { lastEdited: Date.now()});
+        await session.commitTransaction();
         return res.status(201).json({success: true, message: "Response submitted successfully"});
     }
     catch(error){
+        await session.abortTransaction();
         console.log(error);
         return res.status(500).json({success:false, message:"Error submitting response"});
+    }
+    finally{
+        session.endSession(); // end the mongoose session
     }
 });
 

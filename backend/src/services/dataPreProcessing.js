@@ -100,6 +100,8 @@ const dataPreProcessing = async (allResponses) => {
     });
     // add total number of form responses to the processed data
     processedData["totalFormResponses"] = allResponses.length;
+    // console.log(processedData);
+    
     return processedData;
 }
 
@@ -110,12 +112,13 @@ const dataPreProcessing = async (allResponses) => {
 const textQuestionPreProcessing = async (processedData) => {
     // tokenizer to split text into words
     const tokenizer = new natural.WordTokenizer();
+    console.log(processedData);
+    
     // iterate through each question in processedData
     Object.keys(processedData).forEach((question) => {
         // process only text based questions
         if(processedData[question].questionType === 'text'){
             const wordCount = {}; // object to hold word counts
-            const wordCountArray = []; // array to hold word count objects for charting
             // iterate through each answer for the text question
             processedData[question].answers.forEach((answer) => {
                 // tokenize the answer into array of words, remove stopwords    
@@ -132,15 +135,17 @@ const textQuestionPreProcessing = async (processedData) => {
                     }
                 });
             });
-            // convert wordCount object into array of {text, value} objects for charting
-            Object.keys(wordCount).forEach((word) => {
-                wordCountArray.push({text: word, value: wordCount[word]});
-            });
+            // convert wordCount object into array of {name, value} objects for charting
+            const wordCountArray = Object.entries(wordCount). // convert to array of [word, count] pairs
+                                    sort(([, a], [, b]) => b - a). // sort in descending order of count
+                                    slice(0, 30). // take top 30 words
+                                    map((item) => {return {name: item[0], value: item[1]}});
             // add the word count array to processedData and remove raw answers
             processedData[question].distribution = wordCountArray;
             delete processedData[question].answers;
         }
     });
+    delete processedData.totalFormResponses; // remove totalFormResponses as it wont be required in charts
     return processedData;
 }
 
