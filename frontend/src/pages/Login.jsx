@@ -145,14 +145,14 @@ const handleResendVerification = async () =>{
 
   return (
     <div className="flex h-[80vh] items-center justify-center">
-      <div className="flex flex-col bg-white p-8 rounded-2xl shadow-xl w-96 dark:bg-gray-900 dark:shadow-lg">
-        <h2 className="text-2xl font-bold mb-6 text-center text-gray-900 dark:text-gray-100">
+      <div className="flex flex-col bg-white p-8 rounded-2xl shadow-xl w-96">
+        <h2 className="text-2xl font-bold mb-6 text-center text-gray-900">
           {showSignup === true ? "Sign Up" : "Log In"}
         </h2>
 
         {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg dark:bg-red-900/30 dark:border-red-700">
-            <p className="text-red-600 text-sm dark:text-red-400">{error}</p>
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-red-600 text-sm">{error}</p>
           </div>
         )}
 
@@ -171,8 +171,8 @@ const handleResendVerification = async () =>{
           disabled={sendingEmail}
           className={`text-sm text-center mt-4 bg-transparent border-none 
             ${sendingEmail
-              ? "text-gray-400 cursor-not-allowed dark:text-gray-500"
-              : "text-gray-600 hover:underline hover:text-blue-600 cursor-pointer dark:text-gray-300 dark:hover:text-blue-400"
+              ? "text-gray-400 cursor-not-allowed"
+              : "text-gray-600 hover:underline hover:text-blue-600 cursor-pointer"
             }`}
         >
           Forgot your password?
@@ -197,8 +197,8 @@ const handleResendVerification = async () =>{
           disabled={sendingEmail}
           className={`text-sm text-center mt-4 bg-transparent border-none 
             ${sendingEmail
-              ? "text-gray-400 cursor-not-allowed dark:text-gray-500"
-              : "text-gray-600 hover:underline hover:text-blue-600 cursor-pointer dark:text-gray-300 dark:hover:text-blue-400"
+              ? "text-gray-400 cursor-not-allowed"
+              : "text-gray-600 hover:underline hover:text-blue-600 cursor-pointer"
             }`}
         >
           Resend Confrimation Link
@@ -209,16 +209,16 @@ const handleResendVerification = async () =>{
         <div className="mt-6">
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300 dark:border-gray-700" />
+              <div className="w-full border-t border-gray-300" />
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white text-gray-500 dark:bg-gray-900 dark:text-gray-400">Or continue with</span>
+              <span className="px-2 bg-white text-gray-500">Or continue with</span>
             </div>
           </div>
           
           <button
             onClick={handleGoogleLogin}
-            className="w-full mt-4 flex items-center justify-center bg-red-500 text-white p-2 rounded-lg hover:bg-red-600 transition-colors dark:bg-red-600 dark:hover:bg-red-700"
+            className="w-full mt-4 flex items-center justify-center bg-red-500 text-white p-2 rounded-lg hover:bg-red-600 transition-colors"
             disabled={loading}
           >
             <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
@@ -231,7 +231,7 @@ const handleResendVerification = async () =>{
           </button>
           <p 
             onClick={() => setShowSignup(!showSignup)} 
-            className="text-sm text-gray-600 text-center mt-4 hover:underline hover:text-blue-600 cursor-pointer dark:text-gray-300 dark:hover:text-blue-400"
+            className="text-sm text-gray-600 text-center mt-4 hover:underline hover:text-blue-600 cursor-pointer"
           >
             {showSignup ? "Already have an account?" : "Didn't have an Account?"}
         </p>
