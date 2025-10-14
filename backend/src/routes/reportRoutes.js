@@ -1,6 +1,7 @@
 import express, { response } from "express"
 import Response from "../models/response.model.js";
-import {Form, Report} from "../models/form.model.js";
+import Form from "../models/form.model.js";
+import Report from "../models/report.model.js";
 import {dataPreProcessing, textQuestionPreProcessing} from "../services/dataPreProcessing.js";
 import {callAI as generateReport, summaryAndSuggestionPrompt, summaryAndSuggestionResponseSchema} from "../services/AI.js";
 import mongoose from "mongoose";

@@ -1,9 +1,11 @@
 import express from "express"
 import User from "../models/user.model.js";
-import {Form} from "../models/form.model.js";
+import Form from "../models/form.model.js";
 import Response from "../models/response.model.js";
 import limiter from "../middleware/rateLimiter.js";
 import mongoose from "mongoose";
+import AnonymousSubmission from "../models/anonymousSubmission.model.js";
+import jwtAuthorisation from "../middleware/jwtAuthorisation.js";
 const router = express.Router();
 
 router.use(express.json());
@@ -33,7 +35,25 @@ router.get("/viewForms/:formId", async (req, res) => {
         if(formData && !formData.isLive){
             return res.status(403).json({success: false, message: "Form is not live"});
         }
-        return res.json({success: true, form: {title : formData.title, description: formData.description, questions: formData.questions, authRequired : formData.authRequired}}); // return only title, description and questions
+        return res.json({success: true, form: {title : formData.title, description: formData.description, questions: formData.questions, authRequired : formData.authRequired}}); // return only title, description, questions and authRequired
+    }
+    catch(error){
+        console.log(error);
+        return res.status(500).json({success:false, message:"Error fetching form"});
+    }
+});
+
+// This route allows the authenticated user to preview its own specific form by its ID.
+router.get("/preview/:formId", jwtAuthorisation, async (req, res) => {
+    try{
+        const formId = req.params.formId;
+        // check if the form belongs to the user
+        const formData = await Form.findOne({_id: formId, userId: req.user.id});
+        // if formId is not valid
+        if(!formData){
+            return res.status(404).json({success: false, message: "Form Not Found"});
+        }
+        return res.json({success: true, form: {title : formData.title, description: formData.description, questions: formData.questions}}); // return only title, description and questions
     }
     catch(error){
         console.log(error);
@@ -68,13 +88,16 @@ router.post("/submitResponse/:formId", limiter, async (req, res) => {
             if(!user){
                 return res.status(404).json({succes: false, message: "User not found"});
             }
-            const response_userId = await Response.findOne({formId: formId, userId: responseData.userId});
+            var response_userId = null;
+            if(!form.isAnonymous){
+                response_userId = await Response.findOne({formId: formId, userId: responseData.userId});
+            }
+            else{
+                response_userId = await AnonymousSubmission.findOne({formId: formId, userId: responseData.userId});
+            }
             if(response_userId){
                 return res.status(400).json({success: false, message: "User has already submitted response"});
             }
-        }
-        else{
-            responseData.userId = null; // if form does not require authentication, set userId to null
         }
         // if form questions and responseData.responses length do not match then return error
         if(form.questions.length !== responseData.responses.length){
@@ -108,21 +131,25 @@ router.post("/submitResponse/:formId", limiter, async (req, res) => {
                 return res.status(400).json({success: false, message: 'not correct response', questionId: answer.questionId});
             }
         }
-        // if auth is required and form is anonymous then put userId as null in responseData
-        if(form.authRequired && form.isAnonymous){
-            responseData.userId = null;
-        }
-        // console.log(responseData.responses);
         
+        // console.log(responseData.responses);
         const response = new Response({
             formId: formId,
-            userId: responseData.userId,
+            userId: responseData.userId ? responseData.userId : null,
             responses: responseData.responses
         });
         session.startTransaction();
-        await response.save();
+        // if form is anonymous and requires authentication, save the userId and formId in AnonymousSubmission collection
+        if(form.isAnonymous && form.authRequired){
+            const anonymousSubmission = new AnonymousSubmission({
+                userId: responseData.userId,
+                formId: formId
+            });
+            await anonymousSubmission.save({ session });
+        }
+        await response.save({session});
         // update the lastEdited field of the form to current date and time
-        await form.findByIdAndUpdate(formId, { lastEdited: Date.now()});
+        await form.findByIdAndUpdate(formId, { lastEdited: Date.now()}, { session });
         await session.commitTransaction();
         return res.status(201).json({success: true, message: "Response submitted successfully"});
     }

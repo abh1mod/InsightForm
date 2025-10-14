@@ -106,6 +106,30 @@ const Report = () => {
             }
         }
 
+        const fetchRawData = async () => {
+            try{
+                const response = await axios.get(`http://localhost:3000/api/report/${formID}/table-structure`, {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                });
+            }
+            catch(error){
+                if(error.response){
+                    if(error.response.data.message === "invalid/expired token" && token){
+                        toast.error("Session expired. Please log in again.");
+                        logout();
+                    }
+                    else{
+                        toast.error(error.response.data.message || "Failed to fetch raw data");
+                    }
+                }
+                else{
+                    toast.error("Failed to fetch raw data");
+                }
+            }
+        }
+
         fetchSummarySuggestions();
         fetchChartData();
     }, []);
@@ -407,7 +431,7 @@ const Report = () => {
                     <div ref={carouselRef} className="relative overflow-x-auto snap-x snap-mandatory scroll-smooth [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                         <div className="flex gap-4">
                             {chartDataMemo.map((item, i) => (
-                                <div id={`slide-${i}`} data-slide="true" key={i} className="relative snap-center shrink-0 w-full max-w-[100%] rounded-md border border-gray-200 p-4 h-[40rem]">
+                                <div id={`slide-${i}`} data-slide="true" key={i} className="relative snap-center shrink-0 w-full max-w-[100%] rounded-md border border-gray-200 p-4 h-[27rem]">
                                     <div className="absolute top-0 left-0 w-full h-full">
                                         {item.questionType === 'mcq' || item.questionType === 'rating'? 
                                             <Bar options={item.chartOptions} data={item.data}/> :

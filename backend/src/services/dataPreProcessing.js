@@ -17,7 +17,8 @@ const dataPreProcessing = async (allResponses) => {
             var key = ans.questionText;
             // for mcq, include options in the key to differentiate between questions where question is same but user changed the options between form edits
             if(ans.questionType === 'mcq'){
-                key += `_${ans.options.join('_')}`;
+                const sortedOptions = [...ans.options].sort(); // sort options to ensure consistent key regardless of order
+                key += `_${sortedOptions.join('_')}`;
             }
             // if this question is encountered for the first time, initialize its structure in processedData
             if(!processedData.hasOwnProperty(key)){
