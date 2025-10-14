@@ -149,7 +149,7 @@ router.post("/submitResponse/:formId", limiter, async (req, res) => {
         }
         await response.save({session});
         // update the lastEdited field of the form to current date and time
-        await form.findByIdAndUpdate(formId, { lastEdited: Date.now()}, { session });
+        await Form.findByIdAndUpdate(formId, { lastEdited: Date.now()}, { session });
         await session.commitTransaction();
         return res.status(201).json({success: true, message: "Response submitted successfully"});
     }
