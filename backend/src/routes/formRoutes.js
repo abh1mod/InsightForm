@@ -1,6 +1,5 @@
 import express from "express"
-import { Form } from "../models/form.model.js";
-import User from "../models/user.model.js";
+import Form from "../models/form.model.js";
 import mongoose from "mongoose";
 import { callAI as generateSuggestions } from "../services/AI.js";
 import { questionSuggestionPrompt, questionSuggestionResponseSchema } from "../services/AI.js";
@@ -17,7 +16,7 @@ router.use(jwtAuthorisation);
 // This route retrieves all forms created by the authenticated user, sorted by the most recently updated.
 // It returns the form title and its live status.
 // If no forms are found, it returns a message indicating that no forms were found.
-router.get("/userForms", async (req, res, next) => {
+router.get("/userForms", async (req, res) => {
     try {
         let formData = await Form.find({ userId: req.user.id }).sort({ updatedAt: -1 }).select("title isLive isAnonymous authRequired");
         if (!formData || formData.length === 0) {
@@ -27,14 +26,14 @@ router.get("/userForms", async (req, res, next) => {
     }
     catch (error) {
         console.log(error);
-        next(error);
+        return res.status(500).json({success:false, message:"Error fetching forms"});
     }
 });
 
 // This route retrieves a specific form by its ID.
 // It returns the entire form data including its questions and other details.
-// If the form is not found, it passes onto the next error handler.
-router.get("/userForms/:formId", async (req, res, next) => {
+// If the form is not found, it sends error message with 404 status code.
+router.get("/userForms/:formId", async (req, res) => {
     try {
         const { formId } = req.params;
         const formData = await Form.findOne({ _id: formId, userId: req.user.id });
@@ -45,7 +44,7 @@ router.get("/userForms/:formId", async (req, res, next) => {
     }
     catch (error) {
         console.log(error);
-        next(error);
+        return res.status(500).json({success:false, message:"Error fetching form"});
     }
 });
 
@@ -53,7 +52,7 @@ router.get("/userForms/:formId", async (req, res, next) => {
 // It expects a boolean value for the live status in the request body.
 // If the form is successfully updated, it returns a success message.
 // If the form is not found or the user is not authorized to update it, it returns a 404 error.
-router.patch("/:formId/islive-status", async (req, res, next) => {
+router.patch("/:formId/islive-status", async (req, res) => {
     try {
         const { formId } = req.params;
         const { isLive } = req.body;
@@ -72,7 +71,7 @@ router.patch("/:formId/islive-status", async (req, res, next) => {
 // This route allows the authenticated user to create a new empty form only.
 // it is sent as a POST request with the form title and objective in the body.
 // It returns the created form id and success status.
-router.post("/userForms", async (req, res, next) => {
+router.post("/userForms", async (req, res) => {
     try {
         const { title, objective } = req.body;
         if (!title || !objective) {
@@ -89,14 +88,14 @@ router.post("/userForms", async (req, res, next) => {
     }
     catch (error) {
         console.log(error);
-        next(error);
+        return res.status(500).json({success:false, message:"Error creating form"});
     }
 });
 
 // This route allows the authenticated user to update an existing form by its ID.
 // this route will expect the react state object of the form to be sent in the body which is of same structure as the Form model.
 // It updates the form with the provided data and returns the status of the operation.
-router.patch("/userForms/:formId", async (req, res, next) => {
+router.patch("/userForms/:formId", async (req, res) => {
     try {
         const formBody = req.body.formBody; // The form data to be updated
         const formId = req.params.formId; // The ID of the form to be updated
@@ -111,12 +110,12 @@ router.patch("/userForms/:formId", async (req, res, next) => {
     }
     catch (error) {
         console.log(error);
-        next(error);
+        return res.status(500).json({success:false, message:"Error updating form"});
     }
 });
 
 // This route allows the authenticated user to delete a form by its ID.
-router.delete("/userForms/:formId", async (req, res, next) => {
+router.delete("/userForms/:formId", async (req, res) => {
     try {
         const formId = req.params.formId; // The ID of the form to be deleted
         // Find the form by ID and delete it
@@ -130,7 +129,7 @@ router.delete("/userForms/:formId", async (req, res, next) => {
     }
     catch (error) {
         console.log(error);
-        next(error);
+        return res.status(500).json({success:false, message:"Error deleting form"});
     }
 });
 
@@ -140,7 +139,7 @@ router.delete("/userForms/:formId", async (req, res, next) => {
 // it uses the callAI function from AIMiddlewares.js to interact with the AI service. (refer implementation in AIMiddlewares.js)
 // it uses the questionSuggestionPrompt function to structure the prompt for the AI service. (refer implementation in AIMiddlewares.js)
 // it uses the questionSuggestionResponseSchema to get strucutred AI response. (refer implementation in AIMiddlewares.js)
-router.get("/:formId/suggestQuestions", async (req, res, next) => {
+router.get("/:formId/suggestQuestions", async (req, res) => {
     try {
         const formId = req.params.formId;
         const formData = await Form.findOne({ _id: formId, userId: req.user.id }).select("objective questions");
@@ -163,8 +162,7 @@ router.get("/:formId/suggestQuestions", async (req, res, next) => {
         }
         return res.json({ success: true, suggestions: responseData.suggestions });
     }
-    catch (error) {
-        next(error);
+    catch(error){
         console.log(error);
         return res.status(500).json({ success: false, message: error.message });
     }
