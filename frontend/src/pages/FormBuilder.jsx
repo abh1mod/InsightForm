@@ -33,7 +33,7 @@ const FormBuilder = () => {
   // then useParams() will return { formID: "123" }.
 
   const [formState, setFormState] = useState(null);
-  const { token } = useAppContext();
+  const { token, logout } = useAppContext();
   const [loading, setLoading] = useState(false);
 
   const [formTitle, setFormTitle] = useState('Untitled Form');
@@ -64,26 +64,30 @@ const FormBuilder = () => {
 
   useEffect(() => {
     if (formID) {
-      try{
         const fetchFormData = async () => {
+          try{
           const res = await axios.get(`http://localhost:3000/api/form/userForms/${formID.formID}`, {
             headers: {
               Authorization: `Bearer ${token}`
             }
           });
           console.log("Fetched Form Data:", res.data);
-          if(res.data.success) setFormState(res.data.form);
-          firstRender(res.data.form);
-        };
+          if(res.data.success) {
+            setFormState(res.data.form);
+            firstRender(res.data.form);
+          }
 
-        fetchFormData();
-
-      }catch(error){
+      } catch(error){
         console.error("Error fetching form data:", error);
-        toast.error("Failed to fetch form data");
+        if(error.response.data.message == 'invalid/expired token') {
+          toast.info("Sesssion Expired Please Log In Again");
+          logout();
+          navigate('/login');
+        }
       }
   }
-  }, [formID]);
+  fetchFormData();
+  }}, [formID]);
 
   const debouncedFormState = useDebounce(formState, 500);
 
@@ -325,14 +329,23 @@ const addOptionToQuestion = (qIndex) => {
   <hr className="border-gray-200 mb-6" />
 
   {/* Form Title Section */}
+  <div>
+
+    
+  </div>
   <div className='flex flex-col gap-2 mb-4'>
-      <input
+        <div className='flex flex-row'>
+
+    <input
     type="text"
     value={formTitle}
     placeholder="Form Title"
     onChange={(e) => setFormTitle(e.target.value)}
     className="text-3xl font-bold text-gray-800 w-full mb-2 border-b border-transparent focus:border-blue-500 hover:border-blue-400 transition-colors duration-200 focus:outline-none"
   />
+  {/* <p>Draft Saved</p> */}
+
+  </div>
   <input
     type="text"
     value={formDescription}
