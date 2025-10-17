@@ -85,11 +85,14 @@ const FormSubmit = () => {
   const [responses, setResponses] = useState({});
   const [loading, setLoading] = useState(true);
   const isPreview = location.state?.isPreview || false;
+  const formOwnerId = location.state?.formOwnerId || null;
+
   const [userId, setUserId] = useState(null);
   const { token } = useAppContext();
   const [authRequired, setAuthRequired] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [showSubmit, setShowSubmitSuccess] = useState(false);
+
 
 useEffect(() => {
   if(!authRequired) return;
@@ -122,8 +125,13 @@ useEffect(()=>{
 useEffect(() => {
     const fetchFormDetails = async () => {
       try {
+        const routeURL = isPreview ? `http://localhost:3000/api/response/preview/${formID}` : `http://localhost:3000/api/response/viewForms/${formID}`
         const res = await axios.get(
-          `http://localhost:3000/api/response/viewForms/${formID}`
+          routeURL,             {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }
         );
         if (res.data.success) {
           setAuthRequired(res.data.form.authRequired);

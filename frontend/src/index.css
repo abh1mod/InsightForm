@@ -22,13 +22,13 @@
 }
 
 /* Prevent layout shift when vertical scrollbars appear on some pages */
-html {
-    scrollbar-gutter: stable both-edges;
-}
+/* html {
+    scrollbar-gutter: stable;
+} */
 
 /* Dashboard list: keep scrollbar visible and clear of floating buttons */
 .dashboard-list {
-    scrollbar-gutter: stable both-edges;
+    /* scrollbar-gutter: stable;  */
     padding-bottom: 6rem;
     /* keeps last card above FABs */
 }
@@ -48,3 +48,143 @@ html {
         /* room for expanded hover width */
     }
 }
+
+/* Draft Saved Popup Animation */
+@keyframes slide-in-right {
+    0% {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    100% {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.animate-slide-in-right {
+    animation: slide-in-right 0.2s ease-out;
+}
+
+/* Drag and Drop Animations */
+@keyframes slide-up {
+    0% {
+        transform: translateY(0);
+    }
+    100% {
+        transform: translateY(-12px);
+    }
+}
+
+@keyframes slide-down {
+    0% {
+        transform: translateY(0);
+    }
+    100% {
+        transform: translateY(12px);
+    }
+}
+
+.animate-slide-up {
+    animation: slide-up 0.3s ease-out forwards;
+    background-color: #f0f9ff !important;
+    border-left-color: #0ea5e9 !important;
+}
+
+.animate-slide-down {
+    animation: slide-down 0.3s ease-out forwards;
+    background-color: #f0f9ff !important;
+    border-left-color: #0ea5e9 !important;
+}
+
+/* Custom hover scale */
+.hover\:scale-102:hover {
+    transform: scale(1.02);
+}
+
+/* Question swap animations */
+.question-swap-up {
+    animation: slideUpSwap 0.5s ease-in-out !important;
+    z-index: 10 !important;
+    position: relative;
+}
+
+.question-swap-down {
+    animation: slideDownSwap 0.5s ease-in-out !important;
+    z-index: 10 !important;
+    position: relative;
+}
+
+.question-being-replaced-up {
+    animation: slideDownReplace 0.5s ease-in-out !important;
+    opacity: 0.25 !important;
+    z-index: 5 !important;
+    position: relative;
+}
+
+.question-being-replaced-down {
+    animation: slideUpReplace 0.5s ease-in-out !important;
+    opacity: 0.25 !important;
+    z-index: 5 !important;
+    position: relative;
+}
+
+@keyframes slideUpSwap {
+    0% {
+        transform: translateY(0);
+        z-index: 10;
+    }
+    50% {
+        transform: translateY(-15px);
+        z-index: 10;
+    }
+    100% {
+        transform: translateY(0);
+        z-index: 10;
+    }
+}
+
+@keyframes slideDownSwap {
+    0% {
+        transform: translateY(0);
+        z-index: 10;
+    }
+    50% {
+        transform: translateY(15px);
+        z-index: 10;
+    }
+    100% {
+        transform: translateY(0);
+        z-index: 10;
+    }
+}
+
+@keyframes slideDownReplace {
+    0% {
+        transform: translateY(0);
+        opacity: 1;
+    }
+    50% {
+        transform: translateY(15px);
+        opacity: 0.6;
+    }
+    100% {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideUpReplace {
+    0% {
+        transform: translateY(0);
+        opacity: 1;
+    }
+    50% {
+        transform: translateY(-15px);
+        opacity: 0.6;
+    }
+    100% {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+

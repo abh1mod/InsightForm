@@ -24,6 +24,9 @@ import {
   HashtagIcon, // Used for Numbers icon
   CalendarDaysIcon, // Used for Date icon
   XMarkIcon,
+  CheckIcon,
+  Bars3Icon,
+  ChevronUpIcon,
 } from "@heroicons/react/24/outline";
 
 const FormBuilder = () => {
@@ -32,8 +35,11 @@ const FormBuilder = () => {
   // then useParams() will return { formID: "123" }.
 
   const [formState, setFormState] = useState(null);
-  const { token } = useAppContext();
+  const { token, logout } = useAppContext();
   const [loading, setLoading] = useState(false);
+  const [showDraftSaved, setShowDraftSaved] = useState(false);
+  const [animatingQuestionId, setAnimatingQuestionId] = useState(null);
+  const [replacedQuestionId, setReplacedQuestionId] = useState(null);
 
   const [formTitle, setFormTitle] = useState("Untitled Form");
   const [formDescription, setFormDescription] = useState("Form Description");
@@ -103,36 +109,45 @@ const FormBuilder = () => {
       setIsLive(fetchedForm.isLive || false);
       setAuthRequired(fetchedForm.authRequired || false);
       setIsAnonymous(fetchedForm.isAnonymous || false);
-      setQuestions(fetchedForm.questions || []);
+      
+      // Ensure all questions have unique IDs
+      const questionsWithIds = (fetchedForm.questions || []).map((question, index) => ({
+        ...question,
+        id: question.id || `q_${Date.now()}_${index}_${Math.random().toString(36).substr(2, 9)}`
+      }));
+      
+      setQuestions(questionsWithIds);
     }
   };
 
   useEffect(() => {
     if (formID) {
-      try {
+      try{
         const fetchFormData = async () => {
-          const res = await axios.get(
-            `http://localhost:3000/api/form/userForms/${formID.formID}`,
-            {
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
+          const res = await axios.get(`http://localhost:3000/api/form/userForms/${formID.formID}`, {
+            headers: {
+              Authorization: `Bearer ${token}`
             }
-          );
+        });
           console.log("Fetched Form Data:", res.data);
-          if (res.data.success) setFormState(res.data.form);
+          if(res.data.success) setFormState(res.data.form);
           firstRender(res.data.form);
         };
 
         fetchFormData();
-      } catch (error) {
+
+      }catch(error){
         console.error("Error fetching form data:", error);
-        toast.error("Failed to fetch form data");
+        if(error.response.data.message == 'invalid/expired token') {
+          toast.info("Sesssion Expired Please Log In Again");
+          logout();
+          navigate('/login');
+        }
       }
-    }
+  }
   }, [formID]);
 
-  const debouncedFormState = useDebounce(formState, 500);
+  const debouncedFormState = useDebounce(formState, 1500);
 
   useEffect(() => {
     if (debouncedFormState) {
@@ -150,6 +165,11 @@ const FormBuilder = () => {
             }
           );
           console.log("Auto-saved Form Data:", res.data);
+          
+          // Show draft saved popup
+          setShowDraftSaved(true);
+          setTimeout(() => setShowDraftSaved(false), 3000);
+          
           // If isLive changed, broadcast to Dashboard and other tabs with a unique eventId
           if (typeof debouncedFormState.isLive === "boolean") {
             // If we recently broadcasted a user-initiated toggle, skip the autosave broadcast to avoid duplicates
@@ -229,13 +249,21 @@ const FormBuilder = () => {
   // Function to add a new question (placeholder)
   const addQuestion = (type) => {
     const newQuestion = {
-      id: `q${questions.length + 1}`,
+      id: `q_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       questionType: type,
       questionText: `New Question`,
       options: [],
       required: false,
     };
     setQuestions([...questions, newQuestion]);
+    
+    // Scroll to bottom after adding question
+    setTimeout(() => {
+      window.scrollTo({
+        top: document.documentElement.scrollHeight,
+        behavior: 'smooth'
+      });
+    }, 100);
   };
 
   const removeQuestion = (qIndex) => {
@@ -276,6 +304,66 @@ const FormBuilder = () => {
     setQuestions(newQuestions);
   };
 
+
+  // Question reordering functions with animations
+  const moveQuestionUp = (index) => {
+    if (index > 0) {
+      const currentQuestion = questions[index];
+      const previousQuestion = questions[index - 1];
+      
+      // Ensure questions have IDs
+      if (!currentQuestion?.id || !previousQuestion?.id) {
+        return;
+      }
+      
+      // Set animation states first
+      setAnimatingQuestionId(currentQuestion.id);
+      setReplacedQuestionId(previousQuestion.id);
+      
+      // Wait a bit for animation to start, then swap
+      setTimeout(() => {
+        const newQuestions = [...questions];
+        [newQuestions[index - 1], newQuestions[index]] = [newQuestions[index], newQuestions[index - 1]];
+        setQuestions(newQuestions);
+      }, 50);
+      
+      // Clear animations after they complete
+      setTimeout(() => {
+        setAnimatingQuestionId(null);
+        setReplacedQuestionId(null);
+      }, 400);
+    }
+  };
+
+  const moveQuestionDown = (index) => {
+    if (index < questions.length - 1) {
+      const currentQuestion = questions[index];
+      const nextQuestion = questions[index + 1];
+      
+      // Ensure questions have IDs
+      if (!currentQuestion?.id || !nextQuestion?.id) {
+        return;
+      }
+      
+      // Set animation states first
+      setAnimatingQuestionId(currentQuestion.id);
+      setReplacedQuestionId(nextQuestion.id);
+      
+      // Wait a bit for animation to start, then swap
+      setTimeout(() => {
+        const newQuestions = [...questions];
+        [newQuestions[index], newQuestions[index + 1]] = [newQuestions[index + 1], newQuestions[index]];
+        setQuestions(newQuestions);
+      }, 50);
+      
+      // Clear animations after they complete
+      setTimeout(() => {
+        setAnimatingQuestionId(null);
+        setReplacedQuestionId(null);
+      }, 400);
+    }
+  };
+
   const renderQuestionIcon = (type) => {
     switch (type) {
       case "mcq":
@@ -308,6 +396,14 @@ const FormBuilder = () => {
       if (res.data.success) {
         toast.success("Questions Loaded Successfully");
         setQuestions((prev) => [...prev, ...res.data.suggestions]);
+        
+        // Scroll to bottom after generating questions
+        setTimeout(() => {
+          window.scrollTo({
+            top: document.documentElement.scrollHeight,
+            behavior: 'smooth'
+          });
+        }, 100);
       } else {
         toast.error(res.data.message || "Failed to generate questions");
       }
@@ -324,6 +420,8 @@ const FormBuilder = () => {
     if (loading) document.body.style.overflow = "hidden";
     else document.body.style.overflow = "auto";
   }, [loading]);
+
+
 
   return (
     <div>
@@ -437,7 +535,7 @@ const FormBuilder = () => {
                 <button
                   onClick={() =>
                     navigate(`/formsubmit/${formID.formID}`, {
-                      state: { isPreview: true },
+                      state: { isPreview: true, formOwnerId: formID.formID },
                     })
                   }
                   className="flex items-center text-sm text-gray-600 hover:text-blue-600 transition-colors px-2.5 py-1.5 rounded-lg bg-gray-50 hover:bg-blue-50"
@@ -499,8 +597,12 @@ const FormBuilder = () => {
               questions.map((question, index) => (
                 <div
                   key={question.id}
-                  className="bg-white p-6 rounded-xl shadow-lg border-l-4 border-blue-500"
+                  className={`bg-white p-6 rounded-xl shadow-lg border-l-4 border-blue-500 transition-all duration-300 hover:shadow-xl ${
+                    animatingQuestionId === question.id ? 'question-swap-up' : 
+                    replacedQuestionId === question.id ? 'question-being-replaced-up' : ''
+                  }`}
                 >
+                  {/* Question Header with Arrow Buttons */}
                   <div className="flex justify-between items-center mb-4">
                     <div className="flex items-center flex-1">
                       {renderQuestionIcon(question.questionType)}
@@ -515,6 +617,32 @@ const FormBuilder = () => {
                     </div>
 
                     <div className="flex items-center space-x-3 ml-4">
+                      {/* Arrow Buttons */}
+                      <div className="flex flex-col space-y-1">
+                        <button
+                          onClick={() => moveQuestionUp(index)}
+                          disabled={index === 0}
+                          className={`p-1 rounded transition-colors ${
+                            index === 0 
+                              ? 'text-gray-300 cursor-not-allowed' 
+                              : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50'
+                          }`}
+                        >
+                          <ChevronUpIcon className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => moveQuestionDown(index)}
+                          disabled={index === questions.length - 1}
+                          className={`p-1 rounded transition-colors ${
+                            index === questions.length - 1 
+                              ? 'text-gray-300 cursor-not-allowed' 
+                              : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50'
+                          }`}
+                        >
+                          <ChevronDownIcon className="w-4 h-4" />
+                        </button>
+                      </div>
+
                       <TrashIcon
                         onClick={() => removeQuestion(index)}
                         className="w-5 h-5 text-gray-400 hover:text-red-500 cursor-pointer"
@@ -612,6 +740,20 @@ const FormBuilder = () => {
         >
           Generate Question
         </button>
+
+        {/* Draft Saved Popup */}
+        {showDraftSaved && (
+          <div className="fixed top-20 right-4 z-50 animate-slide-in-right">
+            <div className="bg-green-500 text-white px-3 py-2 rounded-md shadow-md flex items-center space-x-1.5">
+              <CheckIcon className="w-4 h-4" />
+              <span className="text-sm font-medium">Draft Saved</span>
+            </div>
+          </div>
+        )}
+
+
+
+
       </div>
     </div>
   );
