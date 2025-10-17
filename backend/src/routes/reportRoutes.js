@@ -92,7 +92,7 @@ router.use("/:formId/raw-data", async (req, res) => {
         // sorting the responses by sortBy and sortOrder
         // default sorting is by createdAt in descending order (newest first)
         // using the queryOptions object to filter responses based on formId and optional filter string
-        const userResponses = await Response.find(queryOptions).sort({[sortBy]: sortOrder}).skip((pageNum - 1) * pageSize).limit(pagesize);
+        const userResponses = await Response.find(queryOptions).sort({[sortBy]: sortOrder}).skip((pageNum - 1) * pageSize).limit(pageSize);
         // structure the row data for tanstack table
         // each row is an object where keys are question texts and values are the answers
         // also adding a submittedAt field to show when the response was submitted
@@ -185,7 +185,6 @@ router.post("/:formId/generate-report", async (req, res) => {
         const newReport = new Report({
             formId: form._id,
             userId: req.user.id,
-            latestResponseId: latestResponseID._id.toString(),
             summary: aiResponseData.summary,
             suggestions: aiResponseData.suggestions
         });
@@ -199,7 +198,10 @@ router.post("/:formId/generate-report", async (req, res) => {
         return res.json({success: true, message: "Report generated successfully", report: aiResponseData});
     }
     catch(error){
-        await session.abortTransaction(); // abort the transaction in case of error
+        // Only abort the transaction if it was actually started
+        if (session.inTransaction()) {
+            await session.abortTransaction(); // abort the transaction in case of error
+        } 
         console.log(error);
         res.status(404).json({success: false, message: "Error generating report" });
     }

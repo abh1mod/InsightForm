@@ -154,7 +154,10 @@ router.post("/submitResponse/:formId", limiter, async (req, res) => {
         return res.status(201).json({success: true, message: "Response submitted successfully"});
     }
     catch(error){
-        await session.abortTransaction();
+        // Only abort the transaction if it was actually started
+        if (session.inTransaction()) {
+            await session.abortTransaction(); // abort the transaction in case of error
+        } 
         console.log(error);
         return res.status(500).json({success:false, message:"Error submitting response"});
     }

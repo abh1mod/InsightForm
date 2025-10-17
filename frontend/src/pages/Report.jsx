@@ -5,6 +5,7 @@ import NormalLoader from "../components/NormalLoader";
 import { useAppContext } from '../context/ContextAPI';
 import axios from "axios";
 import Bubble from "../components/bubble";
+import {useReactTable, getCoreRowModel, flexRender} from '@tanstack/react-table';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -33,9 +34,28 @@ const Report = () => {
     const { token, logout } = useAppContext();
     const [newReportLoading, setNewReportLoading] = useState(false);
     const [chartData, setChartData] = useState([]);
+    const [data, setData] = useState([]);
+    const [columns, setColumns] = useState([]);
     const { formID } = useParams();
     const [summarySuggestions, setSummarySuggestions] = useState({summary: "", suggestions: []});
     const [loading, setLoading] = useState({summarySuggestionsLoading: true, rawDataLoading: true, chartDataLoading: true});
+    const [pageCount, setPageCount] = useState(0);
+    const [pagination, setPagination] = useState({pageIndex: 1, pageSize: 10});
+    const [sorting, setSorting] = useState({id: 'createdAt', desc: true}); // default sorting by createdAt descending
+    const table = useReactTable({
+        data,
+        columns,
+        getCoreRowModel: getCoreRowModel(),
+        manualSorting: true,
+        manualPagination: true,
+        pageCount,
+        state:{
+            pagination,
+            sorting
+        },
+        onPaginationChange: setPagination,
+        onSortingChange: setSorting,
+    });
 
     useEffect(() => {
         const fetchSummarySuggestions = async () => {
@@ -106,6 +126,11 @@ const Report = () => {
             }
         }
 
+        fetchSummarySuggestions();
+        fetchChartData();
+    }, []);
+
+    useEffect(() => {
         const fetchRawData = async () => {
             try{
                 const response = await axios.get(`http://localhost:3000/api/report/${formID}/table-structure`, {
@@ -113,6 +138,18 @@ const Report = () => {
                         Authorization: `Bearer ${token}`
                     }
                 });
+                if(response.data.success){
+                    setColumns(response.data.columnHeaders);
+                    const response2 = await axios.get(`http://localhost:3000/api/report/${formID}/raw-data`, {
+                        headers: {
+                            Authorization: `Bearer ${token}`
+                        }
+                    });
+                    if(response2.data.success){
+                        setData(response2.data.userResponses);
+                        setPageCount(response2.data.setPageCount);
+                    }
+                }
             }
             catch(error){
                 if(error.response){
@@ -128,11 +165,14 @@ const Report = () => {
                     toast.error("Failed to fetch raw data");
                 }
             }
+            finally{
+                setLoading((prev) => {
+                    return {...prev, rawDataLoading: false};
+                });
+            }
         }
-
-        fetchSummarySuggestions();
-        fetchChartData();
-    }, []);
+        fetchRawData();
+    }, [sorting, pagination]);
     
     async function generateReport(){
         try{
@@ -347,6 +387,7 @@ const Report = () => {
                                 placeholder="Global filter..."
                                 readOnly
                             />
+                            <button className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">Search</button>
                             <button className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">Export CSV</button>
                         </div>
                     </div>
