@@ -6,7 +6,7 @@ import formRoutes from "./routes/formRoutes.js";
 import responseRoutes from "./routes/responseRoutes.js";
 import reportRoutes from "./routes/reportRoutes.js";
 import cors from "cors";
-import {connectDB} from "./services/db.js";
+import { connectDB } from "./services/db.js";
 const app = express();
 
 

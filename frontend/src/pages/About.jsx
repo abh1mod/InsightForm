@@ -5,7 +5,7 @@ import { CheckCircleIcon, CodeBracketIcon, BoltIcon, SunIcon, MoonIcon } from '@
 const developers = [
   // Using Tailwind's ring-indigo-50/50 for a placeholder ring effect
   { name: "Abhishek", role: "Full Stack Developer", initials: "A", photoUrl: "https://placehold.co/128x128/f0f9ff/1e3a8a?text=A" },
-  { name: "Anubhav Shrivastava", role: "API Engineer", initials: "AS", photoUrl: "https://placehold.co/128x128/f0f9ff/1e3a8a?text=AS" },
+  { name: "Anubhav Srivastava", role: "Frontend Developer", initials: "AS", photoUrl: "https://placehold.co/128x128/f0f9ff/1e3a8a?text=AS" },
   { name: "Kushagra Singh", role: "Frontend Developer", initials: "KS", photoUrl: "https://placehold.co/128x128/f0f9ff/1e3a8a?text=KS" },
   { name: "Naveen Vashishtha", role: "Full Stack Developer", initials: "NV", photoUrl: "https://placehold.co/128x128/f0f9ff/1e3a8a?text=NV" },
 ];

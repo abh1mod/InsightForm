@@ -17,7 +17,8 @@ const dataPreProcessing = async (allResponses) => {
             var key = ans.questionText;
             // for mcq, include options in the key to differentiate between questions where question is same but user changed the options between form edits
             if(ans.questionType === 'mcq'){
-                key += `_${ans.options.join('_')}`;
+                const sortedOptions = [...ans.options].sort(); // sort options to ensure consistent key regardless of order
+                key += `_${sortedOptions.join('_')}`;
             }
             // if this question is encountered for the first time, initialize its structure in processedData
             if(!processedData.hasOwnProperty(key)){
@@ -48,9 +49,9 @@ const dataPreProcessing = async (allResponses) => {
                         totalResponses: 0, // Total number of responses received for this question
                         avgRating: 0, // Average rating calculated later
                         distribution: {
-                            // Initialize count and percentage for ratings 1 to 10 to 0
-                            count: {"1": 0, "2": 0, "3": 0, "4": 0, "5": 0, "6": 0, "7": 0, "8": 0, "9": 0, "10": 0},
-                            percentage: {"1": 0, "2": 0, "3": 0, "4": 0, "5": 0, "6": 0, "7": 0, "8": 0, "9": 0, "10": 0}
+                            // Initialize count and percentage for ratings 1 to 5 to 0
+                            count: {"0.5": 0, "1": 0, "1.5": 0, "2": 0, "2.5": 0, "3": 0, "3.5": 0, "4": 0, "4.5": 0, "5": 0},
+                            percentage: {"0.5": 0, "1": 0, "1.5": 0, "2": 0, "2.5": 0, "3": 0, "3.5": 0, "4": 0, "4.5": 0, "5": 0}
                         }
                     };
                 }
@@ -64,6 +65,7 @@ const dataPreProcessing = async (allResponses) => {
                     };
                 }
             }
+            
             if(ans.answer.trim() === "") return; // skip empty answers
             processedData[key].totalResponses += 1; // increment total responses for this question
 
@@ -99,6 +101,8 @@ const dataPreProcessing = async (allResponses) => {
     });
     // add total number of form responses to the processed data
     processedData["totalFormResponses"] = allResponses.length;
+    // console.log(processedData);
+    
     return processedData;
 }
 
@@ -109,12 +113,13 @@ const dataPreProcessing = async (allResponses) => {
 const textQuestionPreProcessing = async (processedData) => {
     // tokenizer to split text into words
     const tokenizer = new natural.WordTokenizer();
+    console.log(processedData);
+    
     // iterate through each question in processedData
     Object.keys(processedData).forEach((question) => {
         // process only text based questions
         if(processedData[question].questionType === 'text'){
             const wordCount = {}; // object to hold word counts
-            const wordCountArray = []; // array to hold word count objects for charting
             // iterate through each answer for the text question
             processedData[question].answers.forEach((answer) => {
                 // tokenize the answer into array of words, remove stopwords    
@@ -131,15 +136,17 @@ const textQuestionPreProcessing = async (processedData) => {
                     }
                 });
             });
-            // convert wordCount object into array of {text, value} objects for charting
-            Object.keys(wordCount).forEach((word) => {
-                wordCountArray.push({text: word, value: wordCount[word]});
-            });
+            // convert wordCount object into array of {name, value} objects for charting
+            const wordCountArray = Object.entries(wordCount). // convert to array of [word, count] pairs
+                                    sort(([, a], [, b]) => b - a). // sort in descending order of count
+                                    slice(0, 30). // take top 30 words
+                                    map((item) => {return {name: item[0], value: item[1]}});
             // add the word count array to processedData and remove raw answers
             processedData[question].distribution = wordCountArray;
             delete processedData[question].answers;
         }
     });
+    delete processedData.totalFormResponses; // remove totalFormResponses as it wont be required in charts
     return processedData;
 }
 

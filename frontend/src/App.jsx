@@ -14,6 +14,7 @@ import FormCreate from "./pages/FormCreate";
 import FormBuilder from "./pages/FormBuilder";
 import FormSubmit from "./pages/FormSubmit";
 
+import Report from "./pages/Report";
 
 function App() {
    return (
@@ -33,6 +34,7 @@ function App() {
           <Route path="/formcreate" element={<PrivateRoute><FormCreate /></PrivateRoute>} />
           <Route path="/formbuilder/:formID" element={<PrivateRoute><FormBuilder /></PrivateRoute>} />
           <Route path="/formsubmit/:formID" element={<FormSubmit />} />
+          <Route path="/report/:formID" element={<PrivateRoute><Report /></PrivateRoute>} />
 
         </Route>
       </Routes>

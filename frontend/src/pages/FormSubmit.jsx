@@ -85,11 +85,14 @@ const FormSubmit = () => {
   const [responses, setResponses] = useState({});
   const [loading, setLoading] = useState(true);
   const isPreview = location.state?.isPreview || false;
+  const formOwnerId = location.state?.formOwnerId || null;
+
   const [userId, setUserId] = useState(null);
   const { token } = useAppContext();
   const [authRequired, setAuthRequired] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [showSubmit, setShowSubmitSuccess] = useState(false);
+
 
 useEffect(() => {
   if(!authRequired) return;
@@ -122,8 +125,13 @@ useEffect(()=>{
 useEffect(() => {
     const fetchFormDetails = async () => {
       try {
+        const routeURL = isPreview ? `http://localhost:3000/api/response/preview/${formID}` : `http://localhost:3000/api/response/viewForms/${formID}`
         const res = await axios.get(
-          `http://localhost:3000/api/response/viewForms/${formID}`
+          routeURL,             {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }
         );
         if (res.data.success) {
           setAuthRequired(res.data.form.authRequired);
@@ -165,8 +173,10 @@ useEffect(() => {
       responseData: {
         userId: userId ? userId.toString() : null,
         responses: form.questions.map((q) => ({
-        questionId: q._id,
+          questionId: q._id,
+          questionText: q.questionText,
           questionType: q.questionType,
+          options: q.questionType === "mcq" ? q.options : [],
           answer: String(responses[q._id] || "").trim(),
         })),
       },
@@ -226,7 +236,7 @@ useEffect(() => {
           {form.questions.map((q, index) => (
             <div
               key={q._id}
-              className="bg-white p-8 rounded-xl shadow-md border-l-4 border-blue-500"
+              className="bg-white w-full p-8 rounded-xl shadow-md border-l-4 border-blue-500"
             >
               <label className="block font-medium text-gray-800 text-lg">
                 {q.questionText}{" "}
