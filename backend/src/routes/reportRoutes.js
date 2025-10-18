@@ -25,7 +25,7 @@ router.get("/:formId/table-structure", async (req, res) => {
     try{
         const {formId} = req.params;
         // check if form exists and belongs to the user
-        const resp = await Form.findOne({_id: formID, userId: req.user.id});
+        const resp = await Form.findOne({_id: formId, userId: req.user.id});
         if(!resp){
             return res.status(404).json({success: false, message: "Form Not Found" });
         }
@@ -35,7 +35,7 @@ router.get("/:formId/table-structure", async (req, res) => {
         // by going through each response and then through each answer in the response
         // using a Set to store unique question texts
         const columns = new Set();
-        columns.add("submittedAt");
+        columns.add("createdAt");
         userResponses.forEach((response)=>{
             response.responses.forEach((ans)=>{
                 if(!columns.has(ans.questionText)) columns.add(ans.questionText);
@@ -66,23 +66,24 @@ router.get("/:formId/table-structure", async (req, res) => {
 // sortBy: the field to sort by (default: createdAt)
 // sortOrder: 'asc' for ascending or 'desc' for descending (default: desc)
 // filter: string based on which data would be filtered, it is for global filtering across all columns
-router.use("/:formId/raw-data", async (req, res) => {
+router.get("/:formId/raw-data", async (req, res) => {
     try{
         // get formId from params, page, pageSize, sortBy, sortOrder and filter string from query params
         const {formId} = req.params;
-        const pageNum = req.query.page ? parseInt(req.query.page) : 1; // default page number is 1
+        const pageNum = req.query.page ? parseInt(req.query.page) : 0; // default page number is 1
         const pageSize = req.query.pageSize ? parseInt(req.query.pageSize) : 10; // default page size is 10
         const sortBy = req.query.sortBy ? req.query.sortBy : "createdAt"; // default sorting by createdAt
         const sortOrder = req.query.sortOrder === "asc" ? 1 : -1; // default sorting in descending order
         const filter = req.query.filter ? req.query.filter.toLowerCase() : null; // default no filter
         // check if form exists and belongs to the user
+        
         const resp = await Form.findOne({_id: formId, userId: req.user.id});
         if(!resp){
             return res.status(404).json({success: false, message: "Form Not Found" });
         }
         const queryOptions = {formId: formId};
         // if filter string is provided, add a case-insensitive regex match condition on the answers in the responses
-        if(filter){
+        if(filter && filter.trim() !== ""){
             queryOptions["responses.answer"] = {$regex: filter, $options: 'i'};
         }
         // get total number of responses for the form to calculate pageCount
@@ -92,7 +93,7 @@ router.use("/:formId/raw-data", async (req, res) => {
         // sorting the responses by sortBy and sortOrder
         // default sorting is by createdAt in descending order (newest first)
         // using the queryOptions object to filter responses based on formId and optional filter string
-        const userResponses = await Response.find(queryOptions).sort({[sortBy]: sortOrder}).skip((pageNum - 1) * pageSize).limit(pageSize);
+        const userResponses = await Response.find(queryOptions).sort({[sortBy]: sortOrder}).skip((pageNum) * pageSize).limit(pageSize);
         // structure the row data for tanstack table
         // each row is an object where keys are question texts and values are the answers
         // also adding a submittedAt field to show when the response was submitted
@@ -100,14 +101,14 @@ router.use("/:formId/raw-data", async (req, res) => {
         // this key-value pair structure allows tanstack table to easily map columns to data, since key names are same as column accessorKeys
         const rowData = userResponses.map((response)=>{
             const row = {
-                submittedAt: response.createdAt
+                createdAt: response.createdAt
             };
             response.responses.forEach((ans)=>{
                 row[ans.questionText] = ans.answer;
             });
             return row;
         });
-        return res.json({success: true, userResponses: rowData, pageCount: pageCount });
+        return res.json({success: true, userResponses: rowData, pageCount: pageCount, totalResponses: totalResponses});
     }catch(error){
         console.log(error);
         res.status(400).json({success: false, message: "Error fetching raw data" });
@@ -248,20 +249,30 @@ router.get("/:formId/download-data", async (req, res) => {
             return res.status(404).json({success: false, message: "Form Not Found" });
         }
         // get all responses for the form
+        // calculate unique question texts to form the headers of the CSV
         // structure the data in a way that each row is an object where keys are question texts and values are the answers
         // this structure is suitable for conversion to CSV format
-        const parser = new AsyncParser();
-        const allResponses = await Response.find({formId: formId}).select("responses -_id");
+        const allResponses = await Response.find({formId: formId}).select("responses -_id createdAt");
+        const fields = new Set(); // to store unique question texts
+        fields.add("createdAt");
         const rows = allResponses.map((response) => {
             const rowObj = {};
+            rowObj["createdAt"] = response.createdAt;
             response.responses.forEach((ans) => {
+                if(!fields.has(ans.questionText)) fields.add(ans.questionText);
                 rowObj[ans.questionText] = ans.answer;
             });
             return rowObj;
         });
+        console.log(rows);
+        // Convert the Set of fields to an array
+        const headers = Array.from(fields);
         // Convert the JSON data to CSV format
         // using AsyncParser from json2csv for better performance with large datasets
+        const parser = new AsyncParser({ fields: headers });
         const csv = await parser.parse(rows).promise();
+        console.log(csv);
+        
         // Set the response headers to indicate a file attachment with CSV content
         res.header('Content-Type', 'text/csv');
         res.attachment(`${form.title}-responses.csv`);
