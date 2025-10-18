@@ -5,6 +5,7 @@ import NormalLoader from "../components/NormalLoader";
 import { useAppContext } from '../context/ContextAPI';
 import axios from "axios";
 import Bubble from "../components/bubble";
+import {useReactTable, getCoreRowModel, flexRender} from '@tanstack/react-table';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -15,8 +16,6 @@ import {
   Legend,
 } from 'chart.js';
 import { Bar } from 'react-chartjs-2';
-
-
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -32,10 +31,21 @@ const Report = () => {
     const carouselRef = useRef(null);
     const { token, logout } = useAppContext();
     const [newReportLoading, setNewReportLoading] = useState(false);
+    const [filter, setFilter] = useState("");
+    const [searching, setSearching] = useState(false);
+    const [filterInput, setFilterInput] = useState("");
     const [chartData, setChartData] = useState([]);
+    const [data, setData] = useState([]);
+    const [columns, setColumns] = useState([]);
+    const [downloading, setDownloading] = useState(false);
     const { formID } = useParams();
     const [summarySuggestions, setSummarySuggestions] = useState({summary: "", suggestions: []});
     const [loading, setLoading] = useState({summarySuggestionsLoading: true, rawDataLoading: true, chartDataLoading: true});
+    const [pageCount, setPageCount] = useState(0);
+    const [pagination, setPagination] = useState({pageIndex: 0, pageSize: 10});
+    const [sorting, setSorting] = useState([{id: 'createdAt', desc: true}]); // default sorting by createdAt 
+    const [maxPageIndex, setMaxPageIndex] = useState(1);
+    const [responses, setResponses] = useState({start: 0, end: 0, totalResponses: 0});
 
     useEffect(() => {
         const fetchSummarySuggestions = async () => {
@@ -105,16 +115,46 @@ const Report = () => {
                 });
             }
         }
-
-        const fetchRawData = async () => {
+        const fetchColumns = async () => {
             try{
                 const response = await axios.get(`http://localhost:3000/api/report/${formID}/table-structure`, {
                     headers: {
                         Authorization: `Bearer ${token}`
                     }
                 });
+                if(response.data.success){
+                    const rawColumn = response.data.columnHeaders.map((col) => {
+                        const cellRenderer = ({ getValue }) => {
+                            const value = getValue();
+
+                            // 1. Check if it's the 'createdAt' column
+                            if (col.accessorKey === 'createdAt') {
+                                const date = new Date(value);
+                                // Use locale-specific formatting
+                                return date.toLocaleString();
+                            }
+
+                            // 2. For ALL other columns, check if the value is empty
+                            if (value === null || value === undefined || value === '') {
+                                return <span className="text-gray-400 italic">No response</span>;
+                            }
+
+                            // 3. Otherwise, just return the value
+                            return String(value);
+                        };
+                    // --- End of Renderer Logic ---
+
+                    // Return the column definition with the renderer
+                    return {
+                        ...col,
+                        cell: cellRenderer // Assign the function we just defined
+                    };
+                    })
+                    setColumns(rawColumn);
+                }
             }
             catch(error){
+                setColumns([]);
                 if(error.response){
                     if(error.response.data.message === "invalid/expired token" && token){
                         toast.error("Session expired. Please log in again.");
@@ -132,8 +172,75 @@ const Report = () => {
 
         fetchSummarySuggestions();
         fetchChartData();
+        fetchColumns();
     }, []);
+
+    useEffect(() => {
+        const fetchRawData = async () => {
+            try{
+                setLoading((prev) => {
+                    return {...prev, rawDataLoading: true};
+                });
+                if(columns.length !== 0){
+                    const response = await axios.get(`http://localhost:3000/api/report/${formID}/raw-data?page=${pagination.pageIndex}&pageSize=${pagination.pageSize}&sortBy=${sorting[0].id}&sortOrder=${sorting[0].desc === true ? "desc" : "asc"}&filter=${filter}`, {
+                        headers: {
+                            Authorization: `Bearer ${token}`
+                        }
+                    });
+                    if(response.data.success){
+                        setData(response.data.userResponses);
+                        setPageCount(response.data.pageCount);
+                        setResponses({
+                            start: (pagination.pageIndex) * pagination.pageSize + 1,
+                            end: Math.min((pagination.pageIndex + 1) * pagination.pageSize, response.data.totalResponses),
+                            totalResponses: response.data.totalResponses
+                        });
+                        if(pagination.pageIndex + 1 > maxPageIndex + 3){
+                            setMaxPageIndex(pagination.pageIndex);
+                        }
+                    }
+                }
+            }
+            catch(error){
+                if(error.response){
+                    if(error.response.data.message === "invalid/expired token" && token){
+                        toast.error("Session expired. Please log in again.");
+                        logout();
+                    }
+                    else{
+                        toast.error(error.response.data.message || "Failed to fetch raw data");
+                    }
+                }
+                else{
+                    toast.error("Failed to fetch raw data");
+                }
+            }
+            finally{
+                setSearching(false);
+                setLoading((prev) => {
+                    return {...prev, rawDataLoading: false};
+                });
+            }
+        }
+        fetchRawData();
+    }, [sorting, pagination, columns, filter]);
     
+    const table = useReactTable({
+        data,
+        columns,
+        getCoreRowModel: getCoreRowModel(),
+        manualSorting: true,
+        manualPagination: true,
+        enableSortingRemoval: false,
+        pageCount,
+        state:{
+            pagination,
+            sorting
+        },
+        onPaginationChange: setPagination,
+        onSortingChange: setSorting,
+    });
+
     async function generateReport(){
         try{
             setNewReportLoading(true);
@@ -269,6 +376,62 @@ const Report = () => {
         const current = getCurrentIndex();
         scrollToSlide(current + 1);
     };
+
+    const downloadData = async () => {
+        try{
+            setDownloading(true);
+            const response = await axios.get(`http://localhost:3000/api/report/${formID}/download-data`, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+            
+            if(response.data){
+                const blob = new Blob([response.data], { type: 'text/csv' });
+
+                // 4. Create a temporary URL for the Blob
+                const url = window.URL.createObjectURL(blob);
+
+                // 5. Create a temporary link element to trigger the download
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `responses.csv`; // Set the desired filename
+                document.body.appendChild(a); // Add link to the DOM
+                a.click(); // Programmatically click the link
+
+                // 6. Clean up: Remove the link and revoke the temporary URL
+                a.remove();
+                window.URL.revokeObjectURL(url);
+            }
+        }
+        catch(error){
+            console.log(error);
+            
+            if(error.response){
+                if(error.response.data.message === "invalid/expired token" && token){
+                    toast.error("Session expired. Please log in again.");
+                    logout();
+                }
+                else{
+                    toast.error(error.response.data.message || "Failed to generate report");
+                }
+            }
+            else{
+                toast.error("Failed to generate report");
+            }
+        }
+        finally{
+            setDownloading(false);
+        }
+    }
+
+    const startFiltering = () => {
+        if(filterInput.trim() === filter.trim()) return;
+        setSearching(true);
+        setFilter(filterInput.trim());
+        setPagination({pageIndex: 0, pageSize: 10});
+    }
+
     return (
         <div className="px-4 py-6 space-y-6">
             {/* Section 1: Summary & Suggestions (simplified) */}
@@ -345,73 +508,98 @@ const Report = () => {
                             <input
                                 className="w-64 max-w-full rounded-md border border-gray-300 px-3 py-2 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                                 placeholder="Global filter..."
-                                readOnly
+                                disabled={searching}
+                                value={filterInput}
+                                onChange={(e) => setFilterInput(e.target.value)}
                             />
-                            <button className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">Export CSV</button>
+                            <button disabled={searching} onClick={startFiltering} className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-white text-sm font-medium hover:bg-indigo-700 active:bg-indigo-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:bg-indigo-300 disabled:opacity-75 disabled:cursor-not-allowed">Search</button>
+                            <button disabled={downloading} className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-white text-sm font-medium hover:bg-indigo-700 active:bg-indigo-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:bg-indigo-300 disabled:opacity-75 disabled:cursor-not-allowed" onClick={downloadData}>Export CSV</button>
                         </div>
                     </div>
                 </div>
-                <div className="p-0 overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
-                            <tr>
-                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    <div className="inline-flex items-center gap-2">
-                                        ID
-                                        <span className="text-gray-400">↕</span>
-                                    </div>
-                                </th>
-                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    <div className="inline-flex items-center gap-2">
-                                        Submitted At
-                                        <span className="text-gray-400">↕</span>
-                                    </div>
-                                </th>
-                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    <div className="inline-flex items-center gap-2">
-                                        Q1
-                                        <span className="text-gray-400">↕</span>
-                                    </div>
-                                </th>
-                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    <div className="inline-flex items-center gap-2">
-                                        Q2
-                                        <span className="text-gray-400">↕</span>
-                                    </div>
-                                </th>
-                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    <div className="inline-flex items-center gap-2">
-                                        Q3
-                                        <span className="text-gray-400">↕</span>
-                                    </div>
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-100">
-                            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((i) => (
-                                <tr key={i} className="hover:bg-gray-50">
-                                    <td className="px-4 py-3 text-sm text-gray-900">#{i.toString().padStart(3, '0')}</td>
-                                    <td className="px-4 py-3 text-sm text-gray-500">2025-10-08 12:3{i}</td>
-                                    <td className="px-4 py-3 text-sm text-gray-700">Good</td>
-                                    <td className="px-4 py-3 text-sm text-gray-700">Average</td>
-                                    <td className="px-4 py-3 text-sm text-gray-700">Yes</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-                <div className="p-4 sm:p-6 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-3">
-                    <p className="text-sm text-gray-600">Showing 1 to 10 of 128 results</p>
-                    <div className="inline-flex items-center gap-2">
-                        <button className="rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50">Previous</button>
-                        <div className="hidden sm:flex items-center gap-1">
-                            {Array.from({ length: 6 }).map((_, idx) => (
-                                <button key={idx} className={`rounded-md px-3 py-1.5 text-sm ${idx === 0 ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-gray-50 border border-gray-300'}`}>{idx + 1}</button>
-                            ))}
-                        </div>
-                        <button className="rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50">Next</button>
+                {loading.rawDataLoading ?
+                <div className = "flex justify-center items-center h-[15rem]">
+                    <NormalLoader />
+                </div> :
+                data.length === 0 ?
+                <div className = "flex justify-center items-center h-[15rem]">
+                    <p className="mt-2 pl-5 text-sm text-gray-600">No Raw data available.</p>
+                </div> :
+                <div>
+                    <div className="p-0 overflow-x-auto">
+                        <table className="min-w-full divide-y divide-gray-200 table-fixed">
+                            <thead className="bg-gray-50">
+                                {table.getHeaderGroups().map(headerGroup => (
+                                    <tr key={headerGroup.id}>
+                                        {headerGroup.headers.map(header => {
+                                            {if(header.column.columnDef.header === 'createdAt'){
+                                                return (
+                                                    <th key={header.id} onClick={header.column.getToggleSortingHandler()} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hover:cursor-pointer">
+                                                        <div className="inline-flex w-full items-center gap-2">
+                                                            {flexRender(
+                                                                header.column.columnDef.header,
+                                                                header.getContext()
+                                                            )}
+                            
+                                                            {{
+                                                                asc: ' 🔼',
+                                                                desc: ' 🔽',
+                                                            }[header.column.getIsSorted()]}
+                                                            
+                                                        </div>
+                                                    </th>
+                                                )
+                                            }else{
+                                                return (
+                                                    <th key={header.id} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        <div className="inline-flex w-full items-center gap-2">
+                                                            {flexRender(
+                                                                header.column.columnDef.header,
+                                                                header.getContext()
+                                                            )}
+                                                            
+                                                        </div>
+                                                    </th>
+                                                )
+                                            }
+                                            }
+                                        })}
+                                    </tr>
+                                ))}                           
+                            </thead>
+                            <tbody className="bg-white divide-y divide-gray-100">
+                                {table.getRowModel().rows.map(row => {
+                                    return (
+                                        <tr key={row.id} className="hover:bg-gray-50">
+                                            {row.getVisibleCells().map(cell => {
+                                                return (
+                                                    <td key={cell.id} className="px-4 py-3 text-sm text-gray-900">
+                                                    {flexRender(
+                                                        cell.column.columnDef.cell,
+                                                        cell.getContext()
+                                                    )}
+                                                    </td>
+                                                )
+                                            })}
+                                        </tr>
+                                    )
+                                })}
+                            </tbody>
+                        </table>
                     </div>
-                </div>
+                    <div className="p-4 sm:p-6 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-3">
+                        <p className="text-sm text-gray-600">Showing {responses.start} to {responses.end} of {responses.totalResponses} results</p>
+                        <div className="inline-flex items-center gap-2">
+                            <button className={`rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 ${!table.getCanPreviousPage() ? 'opacity-50':''}`} onClick={()=>table.previousPage()} disabled={!table.getCanPreviousPage()}>Previous</button>
+                            <div className="flex items-center gap-1">
+                                {Array.from({ length: maxPageIndex + 3 > pageCount ? pageCount - maxPageIndex + 1 : 4}).map((_, idx) => (
+                                    <button key={idx} onClick={()=>setPagination((previous) => ({...previous, pageIndex: maxPageIndex + idx - 1}))} className={`rounded-md px-3 py-1.5 text-sm ${maxPageIndex + idx === pagination.pageIndex + 1? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-gray-50 border border-gray-300'}`}>{maxPageIndex + idx}</button>
+                                ))}
+                            </div>
+                            <button className={`rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 ${!table.getCanNextPage() ? 'opacity-50':''}`} onClick={()=>table.nextPage()} disabled={!table.getCanNextPage()}>Next</button>
+                        </div>
+                    </div>
+                </div>}
             </div>
 
             {/* Section 3: Charts Carousel (CSS scroll-snap) */}
