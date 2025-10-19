@@ -9,7 +9,7 @@ const FormCreate = () => {
   const [objective, setObjective] = useState('');
   // State to control the animation
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const { token } = useAppContext();
+  const { token, logout } = useAppContext();
   const navigate = useNavigate();
   // Trigger the animation shortly after the component mounts
   useEffect(() => {
@@ -60,14 +60,18 @@ const FormCreate = () => {
             broadcastCreated(res.data.formId, title);
             navigate("/formbuilder/" + res.data.formId);
         }
-    }catch(err){
-        console.log(err);
-        if (err.response?.data?.message === "invalid/expired token") {
-            toast.error("Your session has expired. Please log in again.");
-            navigate("/login");
-            return;
-        }
-        toast.error(err.response?.data?.message || "Failed to create form");
+    }catch(error){
+        console.log(error);
+        if(error.response){
+                    if(error.response.data.message === "invalid/expired token" && token){
+                        toast.error("Session expired. Please log in again.");
+                        logout();
+                    }
+                    else{
+                        toast.error(error.response.data.message);
+                    }
+                }
+        toast.error(error.response?.data?.message || "Failed to create form");
     }
   };
 

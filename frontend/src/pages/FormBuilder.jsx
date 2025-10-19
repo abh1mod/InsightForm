@@ -140,11 +140,15 @@ const FormBuilder = () => {
 
       }catch(error){
         console.error("Error fetching form data:", error);
-        if(error.response.data.message == 'invalid/expired token') {
-          toast.info("Sesssion Expired Please Log In Again");
-          logout();
-          navigate('/login');
-        }
+        if(error.response){
+                    if(error.response.data.message === "invalid/expired token" && token){
+                        toast.error("Session expired. Please log in again.");
+                        logout();
+                    }
+                    else{
+                        toast.error(error.response.data.message);
+                    }
+                }
       }
   }
   }, [formID]);
@@ -183,6 +187,17 @@ const FormBuilder = () => {
           }
         } catch (error) {
           console.error("Error auto-saving form data:", error);
+          if(error.response){
+                    if(error.response.data.message === "invalid/expired token" && token){
+                        toast.error("Session expired. Please log in again.");
+                        logout();
+                    }
+                    else{
+                        toast.error(error.response.data.message);
+                    }
+                }
+
+          
         }
       };
       updateFormData();
@@ -413,6 +428,15 @@ const FormBuilder = () => {
       toast.error(
         error.response?.data?.message || error.message || "Something went wrong"
       );
+      if(error.response){
+                    if(error.response.data.message === "invalid/expired token" && token){
+                        toast.error("Session expired. Please log in again.");
+                        logout();
+                    }
+                    else{
+                        toast.error(error.response.data.message );
+                    }
+                }
     } finally {
       setLoading(false);
     }

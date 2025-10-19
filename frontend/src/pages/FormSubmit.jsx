@@ -88,7 +88,7 @@ const FormSubmit = () => {
   const formOwnerId = location.state?.formOwnerId || null;
 
   const [userId, setUserId] = useState(null);
-  const { token } = useAppContext();
+  const { token, logout } = useAppContext();
   const [authRequired, setAuthRequired] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [showSubmit, setShowSubmitSuccess] = useState(false);
@@ -110,6 +110,12 @@ useEffect(() => {
     } catch (error) {
       console.error("Error fetching user:", error);
       setUserId(null);
+      if(error.response){
+                    if(error.response.data.message === "invalid/expired token" && token){
+                        toast.error("Session expired. Please log in again.");
+                        logout();
+                    }
+            }
     }
   };
   fetchUser();
@@ -141,6 +147,15 @@ useEffect(() => {
         }
       } catch (error) {
         console.log(error.response?.data?.message || "Error loading form");
+          if(error.response){
+                    if(error.response.data.message === "invalid/expired token" && token){
+                        toast.error("Session expired. Please log in again.");
+                        logout();
+                    }
+                    else{
+                        toast.error(error.response.data.message);
+                    }
+                }
       } finally {
         setLoading(false);
       }
@@ -189,7 +204,7 @@ useEffect(() => {
         payload
       );
       if (res.data.success) {
-        toast.success("Form submitted successfully!");
+        // toast.success("Form submitted successfully!");
         setShowSubmitSuccess(true);
         setResponses({});
       } else {
@@ -256,7 +271,8 @@ useEffect(() => {
 
               {/* MCQ */}
               {q.questionType === "mcq" && (
-                <div className="mt-4 space-y-3">
+                <div>
+                  <div className="mt-4 space-y-3">
                   {q.options.map((opt, i) => (
                     <label
                       key={i}
@@ -276,6 +292,21 @@ useEffect(() => {
                     </label>
                   ))}
                 </div>
+                {
+                  responses[q._id] && 
+                    <div
+                  className="text-sm text-gray-500 mt-2 ml-6 block hover:text-gray-700 underline pointer cursor-pointer"
+                  onClick={() => {
+                    if (isPreview) return;
+                    handleChange(q._id, "");
+                  }}
+                >
+                  Clear
+                  </div>
+                }
+
+                </div>
+                
               )}
 
               {/* RATING */}

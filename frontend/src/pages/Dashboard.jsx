@@ -99,6 +99,15 @@ const Dashboard = () => {
     } catch (error) {
       console.error("Error fetching forms:", error);
       toast.error("Error fetching forms");
+            if(error.response){
+                    if(error.response.data.message === "invalid/expired token" && token){
+                        toast.error("Session expired. Please log in again.");
+                        logout();
+                    }
+                    else{
+                        toast.error(error.response.data.message);
+                    }
+                }
     } finally {
       setLoading(false);
     }
@@ -261,6 +270,15 @@ const Dashboard = () => {
         setForms(previousForms);
       }
     } catch (error) {
+                if(error.response){
+                    if(error.response.data.message === "invalid/expired token" && token){
+                        toast.error("Session expired. Please log in again.");
+                        logout();
+                    }
+                    else{
+                        toast.error(error.response.data.message);
+                    }
+                }
       console.error("Error deleting form:", error);
       toast.error("Error deleting form");
       setForms(previousForms);
@@ -360,6 +378,15 @@ const Dashboard = () => {
           f._id === formId ? { ...f, isLive: currentStatus } : f
         )
       );
+                if(error.response){
+                    if(error.response.data.message === "invalid/expired token" && token){
+                        toast.error("Session expired. Please log in again.");
+                        logout();
+                    }
+                    else{
+                        toast.error(error.response.data.message);
+                    }
+                }
       toast.error(error.message || "Error updating form status");
     }
   };
