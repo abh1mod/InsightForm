@@ -177,7 +177,7 @@ useEffect(() => {
           questionText: q.questionText,
           questionType: q.questionType,
           options: q.questionType === "mcq" ? q.options : [],
-          answer: String(responses[q._id] || "").trim(),
+          answer: String(responses[q._id] || ""),
         })),
       },
     };  
@@ -280,12 +280,25 @@ useEffect(() => {
 
               {/* RATING */}
               {q.questionType === "rating" && (
+                <div className="flex flex-col md:gap-6 md:flex-row ">
                 <div className="mt-4">
                   <StarRating
                     rating={responses[q._id] || 0}
                     onRatingChange={(val) => handleChange(q._id, val)}
                     disabled={isPreview}
                   />
+                </div>
+
+                {responses[q._id] && <div
+                  className="text-sm text-gray-500 mt-2 md:mt-4 block hover:text-gray-700 underline pointer cursor-pointer"
+                  onClick={() => {
+                    if (isPreview) return;
+                    handleChange(q._id, "");
+                  }}
+                >
+                  Clear
+                  </div>}
+
                 </div>
               )}
             </div>

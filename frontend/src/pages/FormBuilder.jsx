@@ -30,9 +30,11 @@ import {
 } from "@heroicons/react/24/outline";
 
 const FormBuilder = () => {
-  const formID = useParams(); // returns an object of key value pairs of URL parameters
+  // const formID = useParams(); // returns an object of key value pairs of URL parameters
   // Example: If the route is defined as /formbuilder/:formID and the URL is /formbuilder/123,
   // then useParams() will return { formID: "123" }.
+  
+  const { formID } = useParams();
 
   const [formState, setFormState] = useState(null);
   const { token, logout } = useAppContext();
@@ -69,7 +71,7 @@ const FormBuilder = () => {
   
   const broadcastFormStatus = (status, source = 'auto') => {
     const payload = {
-      formId: formID.formID,
+      formId: formID,
       isLive: status,
       title: formTitle,
       eventId: `${Date.now()}-${Math.random()}`,
@@ -124,7 +126,7 @@ const FormBuilder = () => {
     if (formID) {
       try{
         const fetchFormData = async () => {
-          const res = await axios.get(`http://localhost:3000/api/form/userForms/${formID.formID}`, {
+          const res = await axios.get(`http://localhost:3000/api/form/userForms/${formID}`, {
             headers: {
               Authorization: `Bearer ${token}`
             }
@@ -147,14 +149,14 @@ const FormBuilder = () => {
   }
   }, [formID]);
 
-  const debouncedFormState = useDebounce(formState, 1500);
+  const debouncedFormState = useDebounce(formState, 2500);
 
   useEffect(() => {
     if (debouncedFormState) {
       const updateFormData = async () => {
         try {
           const res = await axios.patch(
-            `http://localhost:3000/api/form/userForms/${formID.formID}`,
+            `http://localhost:3000/api/form/userForms/${formID}`,
             {
               formBody: debouncedFormState,
             },
@@ -191,7 +193,7 @@ const FormBuilder = () => {
   useEffect(() => {
     const onMessage = (ev) => {
       const { type, payload } = ev.data || {};
-      if (type === "FORM_STATUS" && payload?.formId === formID.formID) {
+      if (type === "FORM_STATUS" && payload?.formId === formID) {
         setIsLive(!!payload.isLive);
       }
     };
@@ -200,7 +202,7 @@ const FormBuilder = () => {
       if (e.key === "insightform:event" && e.newValue) {
         try {
           const { type, payload } = JSON.parse(e.newValue);
-          if (type === "FORM_STATUS" && payload?.formId === formID.formID) {
+          if (type === "FORM_STATUS" && payload?.formId === formID) {
             setIsLive(!!payload.isLive);
           }
         } catch {}
@@ -385,7 +387,7 @@ const FormBuilder = () => {
     setLoading(true);
     try {
       const res = await axios.get(
-        `http://localhost:3000/api/form/${formID.formID}/suggestQuestions`,
+        `http://localhost:3000/api/form/${formID}/suggestQuestions`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -534,8 +536,8 @@ const FormBuilder = () => {
               <div className="flex items-center space-x-3">
                 <button
                   onClick={() =>
-                    navigate(`/formsubmit/${formID.formID}`, {
-                      state: { isPreview: true, formOwnerId: formID.formID },
+                    navigate(`/formsubmit/${formID}`, {
+                      state: { isPreview: true, formOwnerId: formID },
                     })
                   }
                   className="flex items-center text-sm text-gray-600 hover:text-blue-600 transition-colors px-2.5 py-1.5 rounded-lg bg-gray-50 hover:bg-blue-50"
@@ -545,7 +547,7 @@ const FormBuilder = () => {
                 <button
                   onClick={() => {
                     navigator.clipboard.writeText(
-                      `http://localhost:5000/formsubmit/${formID.formID}`
+                      `http://localhost:5000/formsubmit/${formID}`
                     );
                     toast.success("Form link copied to clipboard");
                   }}
