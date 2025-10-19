@@ -166,4 +166,26 @@ router.post("/submitResponse/:formId", limiter, async (req, res) => {
     }
 });
 
+// This route allows the authenticated user to delete a specific response by its ID for a specific form.
+router.delete("/:formId/response-delete/:responseId", jwtAuthorisation, async (req, res) => {
+    try{
+        
+        const formId = req.params.formId;
+        const responseId = req.params.responseId;
+        const form = await Form.findOne({_id: formId, userId: req.user.id});
+        if(!form){
+            return res.status(404).json({success: false, message: "Form Not Found or you are not authorized"});
+        }
+        const deletedResponse = await Response.findOneAndDelete({_id: responseId});
+        if(!deletedResponse){
+            return res.status(404).json({success: false, message: "Response Not Found"});
+        }
+        return res.json({success: true, message: "Response deleted successfully" });
+    }
+    catch(error){
+        console.log(error);
+        return res.status(500).json({success:false, message:"Error deleting response"});
+    }
+});
+
 export default router

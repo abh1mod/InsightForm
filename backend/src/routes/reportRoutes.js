@@ -41,6 +41,10 @@ router.get("/:formId/table-structure", async (req, res) => {
                 if(!columns.has(ans.questionText)) columns.add(ans.questionText);
             });
         });
+        // also include all questions from the form in case some questions were never answered
+        resp.questions.forEach((question)=>{
+            if(!columns.has(question.questionText)) columns.add(question.questionText);
+        });
         // convert the Set to an array of objects with header and accessorKey properties for tanstack table
         // both header and accessorKey are same as we are using question text as the key in the row data
         // refer to /raw-data route for how the row data is structured
@@ -101,7 +105,8 @@ router.get("/:formId/raw-data", async (req, res) => {
         // this key-value pair structure allows tanstack table to easily map columns to data, since key names are same as column accessorKeys
         const rowData = userResponses.map((response)=>{
             const row = {
-                createdAt: response.createdAt
+                createdAt: response.createdAt,
+                response_id: response._id
             };
             response.responses.forEach((ans)=>{
                 row[ans.questionText] = ans.answer;
