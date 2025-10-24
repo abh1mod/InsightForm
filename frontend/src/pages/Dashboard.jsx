@@ -293,7 +293,7 @@ const Dashboard = () => {
 
   // Copy the public link for a form to clipboard
   const handleCopyLink = async (formId) => {
-    const link = `${window.location.origin}/formbuilder/${formId}`;
+    const link = `${window.location.origin}/formsubmit/${formId}`;
     try {
       await navigator.clipboard.writeText(link);
       toast.success("Form link copied to clipboard");
@@ -416,12 +416,6 @@ const Dashboard = () => {
               <div className="text-gray-500 text-lg mb-4">
                 No forms to display
               </div>
-              <button
-                onClick={handleOpenFormCreate}
-                className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Create New
-              </button>
             </div>
           ) : (
             <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1 sm:pr-2">
