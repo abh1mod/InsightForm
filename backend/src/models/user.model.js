@@ -23,8 +23,22 @@ const userSchema = new mongoose.Schema({
             // Make password required only if the user is not signing up with Google.
             return !this.googleId;
         }, 'Password is required'],
-        minlength:[8,"Password must be at least 8 character long"],
-        match: [/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/, 'Must be 8+ chars, with uppercase, lowercase, digit & special char'],
+        validate: {
+            validator: function(value) {
+                // 'value' is the current value of the password field.
+
+                // If the password field wasn't modified, skip validation.
+                if (!this.isModified('password')) {
+                    return true;
+                }
+
+                // If password *was* modified (e.g., at signup or password reset),
+                // run the validation checks on the plain-text 'value'.
+                const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+                return regex.test(value);
+            },
+            message: 'Password must be 8+ chars, with uppercase, lowercase, digit & special char'
+        }
     },
     googleId: {
         type: String,

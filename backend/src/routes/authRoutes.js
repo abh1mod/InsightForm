@@ -289,13 +289,13 @@ router.post('/resend-verification', limiter, blockIfLoggedIn, async (req, res) =
     }
 });
 
-// route to initiate the forget password process
+// route to initiate the forgot password process
 // it expects the user's email in the request body
 // if the email is valid and belongs to a user
 // and daily limit is not reached and last email sent was 2 minutes ago,
 // it generates a reset password token and sends it to the user's email
 // the user can then use this token to reset their password
-router.post('/forget-password', limiter, blockIfLoggedIn, async (req, res) => {
+router.post("/forgot-password", limiter, blockIfLoggedIn, async (req, res) => {
     try{
         const email = req.body.email;
         if(!email) return res.status(400).json({success: false, message: "Please provide an email"});
@@ -319,6 +319,7 @@ router.post('/forget-password', limiter, blockIfLoggedIn, async (req, res) => {
         if (user.lastTokenSentAt && (Date.now() - user.lastTokenSentAt.getTime()) < twoMinutes) {
             return res.status(400).json({success: false, message: "Please wait before requesting another password reset email"});
         }
+        
         const token = user.generateResetPasswordToken();
         user.lastTokenSentAt = Date.now(); // update the last sent time
         user.passwordResetAttempts -= 1; // decrement the attempts
