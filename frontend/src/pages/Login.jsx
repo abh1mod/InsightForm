@@ -7,7 +7,7 @@ import LoginComp from "../components/LoginComp";
 import SignUpComp from "../components/SignUpComp";
 import { toast } from 'react-toastify';
 
-
+  
 
 const Login = () => {
   const { login, isLoggedIn } = useAppContext();

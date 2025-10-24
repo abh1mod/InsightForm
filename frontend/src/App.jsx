@@ -1,4 +1,9 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+
+import React, { useContext } from 'react'; // Ensure useContext is imported if used elsewhere in App.jsx
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+
 import Login from "./pages/Login";
 import Home from "./pages/Home";
 import Layout from "./components/Layout";
@@ -9,7 +14,8 @@ import AuthSuccess from "./pages/AuthSuccess";
 import AuthFailure from "./pages/AuthFailure";
 import PrivateRoute from "./components/PrivateRoute";
 import VerifyEmail from "./pages/VerifyEmail";
-import ResetPassword from "./pages/ResetPassword";
+import ForgotPassword from './pages/ForgotPassword'; 
+import ResetPassword from './pages/ResetPassword';
 import FormCreate from "./pages/FormCreate";
 import FormBuilder from "./pages/FormBuilder";
 import FormSubmit from "./pages/FormSubmit";
@@ -17,9 +23,10 @@ import FormSubmit from "./pages/FormSubmit";
 import Report from "./pages/Report";
 
 function App() {
-   return (
-    <BrowserRouter>
+  return (
+    <Router>
       <Routes>
+
         <Route element={<Layout />}>   {/* Wrap with layout */}
           <Route path="/" element={<Home />} />
           <Route path="/about" element={<About />} />
@@ -29,6 +36,8 @@ function App() {
           <Route path="/auth/failure" element={<AuthFailure />} />
 
           <Route path="/verify/:token" element={<VerifyEmail/>} />
+          <Route path="forgot-password" element={<ForgotPassword />} /> 
+          <Route path="reset-password/:token" element={<ResetPassword />} /> 
           <Route path="/reset-password/:token" element={<ResetPassword />} />
           <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
           <Route path="/formcreate" element={<PrivateRoute><FormCreate /></PrivateRoute>} />
@@ -38,7 +47,7 @@ function App() {
 
         </Route>
       </Routes>
-    </BrowserRouter>
+    </Router>
   );
 }
 
