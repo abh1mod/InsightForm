@@ -6,46 +6,30 @@ import { toast } from "react-toastify";
 const ForgotPassword = () => {
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
-  const [message, setMessage] = useState(""); // For success messages on page if needed
   const [sendingEmail, setSendingEmail] = useState(false); // Using 'sendingEmail' state like original
 
   // Email validation regex from original Login.jsx
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-  /**
-   * Handles form submission, replicating the logic from the
-   * original handlePasswordReset function in Login.jsx.
-   */
   const handleSubmit = async (e) => {
     e.preventDefault(); // Prevent default form submission
     setSendingEmail(true); // Set loading state (using original state name)
     setError(""); // Clear previous errors
-    setMessage(""); // Clear previous messages
-
-    // Validation exactly like original handlePasswordReset
     if (!emailRegex.test(email)) {
       setError("Please enter a valid email address.");
       setSendingEmail(false);
       return;
     }
 
-    console.log("AXIOS OBJECT:", axios); // Add this line
     try {
-      // API call exactly like original handlePasswordReset
-      // Using '/auth/forget-password' endpoint from original Login.jsx
-      const res = await axios.post("http://localhost:3000/api/auth/forget-password", { // Add http://localhost:3000/api
-      email: email,
-      });
+      // Using '/auth/forgot-password' endpoint from Login.jsx
+      const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+      const res = await axios.post(`${API_URL}/api/auth/forgot-password`, { email });
 
-      // Success handling exactly like original handlePasswordReset
       if (res.data.success) {
         toast.success(res.data.message || "Password reset email sent!");
-        setMessage(res.data.message || "Password reset email sent!"); // Optional: show message on page too
         setEmail(""); // Clear input on success
-      } else {
-        // Handle cases where API responds success:false
-        throw new Error(res.data.message || "Failed to send reset email.");
-      }
+      } 
     } catch (err) {
       // Error handling exactly like original handlePasswordReset
       console.error(err.response?.data || err.message); // Log the detailed error
@@ -73,19 +57,6 @@ const ForgotPassword = () => {
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Error Message Display */}
-          {error && (
-            <p className="text-red-500 text-sm text-center bg-red-100 py-2 px-3 rounded-md">
-              {error}
-            </p>
-          )}
-          {/* Success Message Display (Optional) */}
-          {message && (
-            <p className="text-green-600 text-sm text-center bg-green-100 py-2 px-3 rounded-md">
-              {message}
-            </p>
-          )}
-
           <div>
             <label
               htmlFor="email"
