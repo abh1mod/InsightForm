@@ -6,7 +6,7 @@ import {
 
 const FORMSPREE_URL = "https://formspree.io/f/mwpbyenv";
 
-// Data for the static contact details
+// Data for the static 
 const contactDetails = [
   { 
     name: 'Email Support', 
