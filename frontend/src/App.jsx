@@ -16,6 +16,7 @@ import PrivateRoute from "./components/PrivateRoute";
 import VerifyEmail from "./pages/VerifyEmail";
 import ForgotPassword from './pages/ForgotPassword'; 
 import ResetPassword from './pages/ResetPassword';
+import ResendVerification from './pages/ResendVerification';
 import FormCreate from "./pages/FormCreate";
 import FormBuilder from "./pages/FormBuilder";
 import FormSubmit from "./pages/FormSubmit";
@@ -36,9 +37,9 @@ function App() {
           <Route path="/auth/failure" element={<AuthFailure />} />
 
           <Route path="/verify/:token" element={<VerifyEmail/>} />
-          <Route path="forgot-password" element={<ForgotPassword />} /> 
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/resend-verification" element={<ResendVerification />} />
           <Route path="reset-password/:token" element={<ResetPassword />} /> 
-          <Route path="/reset-password/:token" element={<ResetPassword />} />
           <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
           <Route path="/formcreate" element={<PrivateRoute><FormCreate /></PrivateRoute>} />
           <Route path="/formbuilder/:formID" element={<PrivateRoute><FormBuilder /></PrivateRoute>} />

@@ -42,7 +42,7 @@ const ForgotPassword = () => {
       setSendingEmail(false);
     }
   };
-
+  
   return (
     // Outer container - Centered layout matching Login.jsx
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
