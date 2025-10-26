@@ -124,8 +124,8 @@ const Login = () => {
 
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100"> {/* Adjusted min-h */}
-      <div className="bg-white p-8 rounded-xl shadow-xl w-full max-w-md"> {/* Adjusted width/max-w */}
+    <div className="flex min-[80vh] items-center justify-center">
+      <div className="flex mt-12 mb-12 flex-col bg-white p-8 rounded-2xl shadow-xl w-96">
         <h2 className="text-2xl font-bold mb-6 text-center text-gray-900">
           {showSignup ? "Sign Up" : "Log In"}
         </h2>

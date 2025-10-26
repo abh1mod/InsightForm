@@ -1,9 +1,11 @@
 import { useAppContext } from "../context/ContextAPI";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect} from "react";
+import NormalLoader from "../components/NormalLoader";
 import { toast } from "react-toastify";
+import axios from "axios";
 
 const Dashboard = () => {
-  const { logout, token } = useAppContext();
+  const { logout, token, notificationList, unread, lastChecked, setUnread, setLastChecked, tabSeen, setTabSeen, loadingNotifications } = useAppContext();
 
   // Hover states for floating buttons
   const [isHovered, setIsHovered] = useState(false);
@@ -14,58 +16,21 @@ const Dashboard = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [formToDelete, setFormToDelete] = useState(null);
 
-  // Notifications
-  const [showNotifications, setShowNotifications] = useState(false);
-  const [notifications, setNotifications] = useState([]);
-  const seenEventKeys = useRef(new Set());
-  const [newNotificationCount, setNewNotificationCount] = useState(0);
-  const NOTIF_STORAGE_KEY = "if:notifications";
-  const NOTIF_NEWCOUNT_KEY = "if:notifications:newCount";
+  // This state will hold the 'lastChecked' value at the moment the panel is opened
+  const [renderLastChecked, setRenderLastChecked] = useState(lastChecked);
 
-  const clearNotificationsStorage = () => {
-    try {
-      sessionStorage.removeItem(NOTIF_STORAGE_KEY);
-      sessionStorage.removeItem(NOTIF_NEWCOUNT_KEY);
-    } catch {}
-    setNotifications([]);
-    setNewNotificationCount(0);
-  };
+  useEffect(() => {
+    if (!tabSeen) {
+      setRenderLastChecked(lastChecked);
+    }
+  }, [lastChecked, tabSeen]);
 
-  // Broadcast channel for cross-tab updates
-  const channel = useRef(
-    (() => {
-      try {
-        return new BroadcastChannel("insightform");
-      } catch {
-        return null;
-      }
-    })()
-  );
-
-  // Add a notification entry (session only; not persisted)
-  const pushNotification = (message) => {
-    setNotifications((prev) => {
-      const next = [
-        {
-          id: `${Date.now()}-${Math.random()}`,
-          message,
-          timestamp: new Date().toISOString(),
-        },
-        ...prev,
-      ].slice(0, 10); // cap at 10
-      try {
-        sessionStorage.setItem(NOTIF_STORAGE_KEY, JSON.stringify(next));
-      } catch {}
-      return next;
-    });
-    setNewNotificationCount((prev) => {
-      const next = Math.min((prev || 0) + 1, 10);
-      try {
-        sessionStorage.setItem(NOTIF_NEWCOUNT_KEY, String(next));
-      } catch {}
-      return next;
-    });
-  };
+  useEffect(() => {
+    return () => {
+      // Cleanup on unmount
+      tabSeen && setTabSeen(false);
+    }
+  }, [tabSeen]);
 
   // Fetch user forms
   const fetchForms = async () => {
@@ -117,115 +82,25 @@ const Dashboard = () => {
     if (token) fetchForms();
   }, [token]);
 
-  // If token disappears (logout/session expired), clear session notifications
-  useEffect(() => {
-    if (!token) {
-      clearNotificationsStorage();
-    }
-  }, [token]);
-
-  // Restore notifications for this session
-  useEffect(() => {
-    try {
-      const saved = sessionStorage.getItem(NOTIF_STORAGE_KEY);
-      const initial = saved ? JSON.parse(saved) : [];
-      if (Array.isArray(initial)) setNotifications(initial);
-      const savedCount = Number(
-        sessionStorage.getItem(NOTIF_NEWCOUNT_KEY) || 0
-      );
-      setNewNotificationCount(Number.isFinite(savedCount) ? savedCount : 0);
-    } catch {}
-  }, []);
-
-  // Cross-tab communication: BroadcastChannel
-  useEffect(() => {
-    if (!channel.current) return;
-    const onMessage = (ev) => {
-      const { type, payload } = ev.data || {};
-      const key =
-        payload?.eventId ||
-        `${type}:${payload?.formId || payload?.title || ""}:${payload?.isLive}`;
-      if (key && seenEventKeys.current.has(key)) return;
-      if (key) seenEventKeys.current.add(key);
-      if (type === "FORM_CREATED") {
-        pushNotification(
-          `New form created: ${payload?.title || payload?.formId}`
-        );
-        fetchForms();
-      }
-      if (type === "FORM_DELETED") {
-        pushNotification(`Form deleted: ${payload?.title || payload?.formId}`);
-        fetchForms();
-      }
-      if (type === "FORM_STATUS") {
-        pushNotification(
-          `Form ${payload?.title || payload?.formId} is now ${
-            payload?.isLive ? "Live" : "Offline"
-          }`
-        );
-        setForms((prev) =>
-          prev.map((f) =>
-            f._id === payload.formId ? { ...f, isLive: payload.isLive } : f
-          )
-        );
-      }
-    };
-    channel.current.addEventListener("message", onMessage);
-    return () => channel.current.removeEventListener("message", onMessage);
-  }, []);
-
-  // Fallback: localStorage events
-  useEffect(() => {
-    const onStorage = (e) => {
-      if (e.key === "insightform:event" && e.newValue) {
-        try {
-          const { type, payload } = JSON.parse(e.newValue);
-          const key =
-            payload?.eventId ||
-            `${type}:${payload?.formId || payload?.title || ""}:${
-              payload?.isLive
-            }`;
-          if (key && seenEventKeys.current.has(key)) return;
-          if (key) seenEventKeys.current.add(key);
-          if (type === "FORM_CREATED") {
-            pushNotification(
-              `New form created: ${payload?.title || payload?.formId}`
-            );
-            fetchForms();
-          }
-          if (type === "FORM_DELETED") {
-            pushNotification(
-              `Form deleted: ${payload?.title || payload?.formId}`
-            );
-            fetchForms();
-          }
-          if (type === "FORM_STATUS") {
-            pushNotification(
-              `Form ${payload?.title || payload?.formId} is now ${
-                payload?.isLive ? "Live" : "Offline"
-              }`
-            );
-            setForms((prev) =>
-              prev.map((f) =>
-                f._id === payload.formId ? { ...f, isLive: payload.isLive } : f
-              )
-            );
-          }
-        } catch {}
-      }
-    };
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
-  }, []);
-
   // Clear notification count when notifications panel is opened
-  const handleNotificationToggle = () => {
-    setShowNotifications((v) => !v);
-    if (!showNotifications) {
-      setNewNotificationCount(0);
-      try {
-        sessionStorage.setItem(NOTIF_NEWCOUNT_KEY, "0");
-      } catch {}
+  const handleNotificationToggle = async () => {
+    try{
+      const isOpening = !tabSeen;
+      setTabSeen((v) => !v);
+      if (isOpening) {
+        setUnread(0);
+      }
+      const response = await axios.patch("http://localhost:3000/api/notification/mark-notifications-read", {}, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      if(response.data.success){
+        setLastChecked(response.data.lastchecked);
+      }
+    }
+    catch(error){
+      console.error("Error marking notifications as read:", error);
     }
   };
 
@@ -249,21 +124,10 @@ const Dashboard = () => {
       const data = await response.json();
       if (data.success) {
         toast.success("Form deleted successfully");
-        pushNotification(`Form deleted: ${formToDelete?.title || formId}`);
-        channel.current &&
-          channel.current.postMessage({
-            type: "FORM_DELETED",
-            payload: { formId },
-          });
-        localStorage.setItem(
-          "insightform:event",
-          JSON.stringify({ type: "FORM_DELETED", payload: { formId } })
-        );
       } else {
         if (data.message === "invalid/expired token") {
           toast.error("Your session has expired. Please log in again.");
           logout();
-          clearNotificationsStorage();
           return;
         }
         toast.error(data.message || "Failed to delete form");
@@ -341,27 +205,11 @@ const Dashboard = () => {
         toast.success(
           `Form ${!currentStatus ? "activated" : "deactivated"} successfully`
         );
-        const nextStatus = !currentStatus;
-        pushNotification(
-          `Form ${title || formId} is now ${nextStatus ? "Live" : "Offline"}`
-        );
-        channel.current &&
-          channel.current.postMessage({
-            type: "FORM_STATUS",
-            payload: { formId, isLive: nextStatus, title },
-          });
-        localStorage.setItem(
-          "insightform:event",
-          JSON.stringify({
-            type: "FORM_STATUS",
-            payload: { formId, isLive: nextStatus, title },
-          })
-        );
+        
       } else {
         if (data.message === "invalid/expired token") {
           toast.error("Your session has expired. Please log in again.");
           logout();
-          clearNotificationsStorage();
           return;
         }
         setForms((prev) =>
@@ -535,8 +383,8 @@ const Dashboard = () => {
 
           {/* Right-side slide-in notifications panel */}
           <div
-            className={`fixed top-20 right-0 h-[70vh] w-80 bg-white border-l border-gray-200 shadow-xl z-40 transform transition-transform duration-300 ${
-              showNotifications ? "translate-x-0" : "translate-x-full"
+            className={`flex flex-col fixed top-20 right-0 h-[70vh] w-80 bg-white border-l border-gray-200 shadow-xl z-40 transform transition-transform duration-300 ${
+              tabSeen ? "translate-x-0" : "translate-x-full"
             }`}
           >
             <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
@@ -545,27 +393,36 @@ const Dashboard = () => {
               </h4>
               <button
                 className="text-gray-500 hover:text-gray-700"
-                onClick={() => setShowNotifications(false)}
+                onClick={() => setTabSeen(false)}
                 aria-label="Close notifications"
               >
                 ✕
               </button>
             </div>
-            <div className="h-full overflow-y-auto p-4 space-y-3">
-              {notifications.length === 0 ? (
+            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              {loadingNotifications ? 
+              <div className="flex justify-center items-center h-full">
+                <NormalLoader />
+              </div> : notificationList.length === 0 ? (
                 <p className="text-sm text-gray-500">No notifications yet.</p>
               ) : (
-                notifications.map((n) => (
+                notificationList.map((n, i) => {
+                  // console.log(new Date(renderLastChecked));
+                  // console.log(new Date(n.createdAt));
+                  // console.log(new Date(n.createdAt) > new Date(renderLastChecked));
+                  
+                  console.log(renderLastChecked && (new Date(n.createdAt) > new Date(renderLastChecked)));
+                  return (
                   <div
-                    key={n.id}
-                    className="p-3 rounded-lg bg-gray-50 border border-gray-200"
+                    key={i}
+                    className={`p-3 rounded-lg border ${renderLastChecked && (new Date(n.createdAt) > new Date(renderLastChecked)) ? 'bg-blue-50 border-blue-300' : 'bg-gray-50 border-gray-200'}`}
                   >
-                    <div className="text-sm text-gray-800">{n.message}</div>
+                    <div className="text-sm text-gray-800">{`${n.userName} has submitted ${n.formTitle}`}</div>
                     <div className="text-xs text-gray-400 mt-1">
-                      {new Date(n.timestamp).toLocaleString()}
+                      {new Date(n.createdAt).toLocaleString()}
                     </div>
                   </div>
-                ))
+                )})
               )}
             </div>
           </div>
@@ -615,9 +472,9 @@ const Dashboard = () => {
                   </span>
                 </span>
                 {/* Notification badge */}
-                {newNotificationCount > 0 && (
+                {unread > 0 && (
                   <span className="absolute top-2 right-2 bg-red-500 text-white text-xs rounded-full px-2 py-0.5">
-                    {newNotificationCount}
+                    {unread}
                   </span>
                 )}
               </button>

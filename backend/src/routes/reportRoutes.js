@@ -177,7 +177,7 @@ router.post("/:formId/generate-report", async (req, res) => {
         if(!allResponses || allResponses.length === 0){
             return res.status(400).json({success: false, message: "No responses found for this form"});
         }
-        const preProcessedData = await dataPreProcessing(allResponses);
+        const preProcessedData = await dataPreProcessing(allResponses, 'ai');
         const structuredPrompt = summaryAndSuggestionPrompt(form.objective, preProcessedData);
         // call the AI service with the structured prompt and the expected response schema
         const aiResponse = await generateReport(structuredPrompt, summaryAndSuggestionResponseSchema);
@@ -230,7 +230,7 @@ router.get("/:formId/chart-data", async (req, res) => {
         if(!allResponses || allResponses.length === 0){
             return res.status(400).json({success: false, message: "No responses found for this form"});
         }
-        const preProcessedData = await dataPreProcessing(allResponses);
+        const preProcessedData = await dataPreProcessing(allResponses, 'chart');
         const chartData = await textQuestionPreProcessing(preProcessedData);
         // console.log(chartData);
         

@@ -61,6 +61,9 @@ const Report = () => {
     useEffect(() => {
         const fetchSummarySuggestions = async () => {
             try{
+                setLoading((prev) => {
+                    return {...prev, summarySuggestionsLoading: true};
+                });
                 const response = await axios.get(`http://localhost:3000/api/report/${formID}/latest-report`, {
                     headers: {
                         Authorization: `Bearer ${token}`
@@ -92,40 +95,6 @@ const Report = () => {
             }
         }
 
-        const fetchChartData = async () => {
-            try{
-                const response = await axios.get(`http://localhost:3000/api/report/${formID}/chart-data`, {
-                    headers: {
-                        Authorization: `Bearer ${token}`
-                    }
-                });
-                if(response.data.success){
-                    console.log(response);
-                    
-                    setChartData(response.data.chartData);
-                }
-            }
-            catch(error){
-                console.log(error);
-                if(error.response){
-                    if(error.response.data.message === "invalid/expired token" && token){
-                        toast.error("Session expired. Please log in again.");
-                        logout();
-                    }
-                    else{
-                        toast.error(error.response.data.message || "Failed to fetch chart data");
-                    }
-                }
-                else{
-                    toast.error("Failed to fetch chart data");
-                }
-            }
-            finally{
-                setLoading((prev) => {
-                    return {...prev, chartDataLoading: false};
-                });
-            }
-        }
         const fetchColumns = async () => {
             try{
                 const response = await axios.get(`http://localhost:3000/api/report/${formID}/table-structure`, {
@@ -199,13 +168,53 @@ const Report = () => {
         }
 
         fetchSummarySuggestions();
-        fetchChartData();
         fetchColumns();
     }, []);
 
     useEffect(() => {
         fetchRawData();
     }, [sorting, pagination, columns, filter, refetchFlag]);
+
+    useEffect(() => {
+        const fetchChartData = async () => {
+            try{
+                setLoading((prev) => {
+                    return {...prev, chartDataLoading: true};
+                });
+                const response = await axios.get(`http://localhost:3000/api/report/${formID}/chart-data`, {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                });
+                if(response.data.success){
+                    console.log(response);
+                    
+                    setChartData(response.data.chartData);
+                }
+            }
+            catch(error){
+                console.log(error);
+                if(error.response){
+                    if(error.response.data.message === "invalid/expired token" && token){
+                        toast.error("Session expired. Please log in again.");
+                        logout();
+                    }
+                    else{
+                        toast.error(error.response.data.message || "Failed to fetch chart data");
+                    }
+                }
+                else{
+                    toast.error("Failed to fetch chart data");
+                }
+            }
+            finally{
+                setLoading((prev) => {
+                    return {...prev, chartDataLoading: false};
+                });
+            }
+        }
+        fetchChartData();
+    }, [refetchFlag]);
     
     const table = useReactTable({
         data,
@@ -243,7 +252,10 @@ const Report = () => {
                             totalResponses: response.data.totalResponses
                         });
                         if(pagination.pageIndex + 1 > maxPageIndex + 3){
-                            setMaxPageIndex(pagination.pageIndex);
+                            setMaxPageIndex(pagination.pageIndex + 1);
+                        }
+                        else if(pagination.pageIndex + 1 < maxPageIndex){
+                            setMaxPageIndex((prev) => Math.max(prev - 4, 1));
                         }
                     }
                 }
@@ -339,6 +351,32 @@ const Report = () => {
                         }]
                     }
                 }
+            }
+            else if(chartData[question].questionType === 'number'){
+                return {
+                    questionType: chartData[question].questionType,
+                    chartOptions: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                            position: 'top',
+                            },
+                            title: {
+                            display: true,
+                            text: chartData[question].questionText,
+                            }
+                        },
+                        maintainAspectRatio: false
+                    },
+                    data: {
+                        labels: chartData[question].bins,
+                        datasets: [{
+                            label: "Responses",
+                            data: chartData[question].binCounts,
+                            backgroundColor: 'rgba(255, 159, 64, 0.6)'
+                        }]
+                    }
+                };
             }
             else if(chartData[question].questionType === 'rating'){
                 return {
@@ -709,7 +747,7 @@ const Report = () => {
                             {chartDataMemo.map((item, i) => (
                                 <div id={`slide-${i}`} data-slide="true" key={i} className="relative snap-center shrink-0 w-full max-w-[100%] rounded-md border border-gray-200 p-4 h-[27rem]">
                                     <div className="absolute top-0 left-0 w-full h-full">
-                                        {item.questionType === 'mcq' || item.questionType === 'rating'? 
+                                        {item.questionType === 'mcq' || item.questionType === 'rating' || item.questionType === 'number' ? 
                                             <Bar options={item.chartOptions} data={item.data}/> :
                                             <Bubble data={item.words} title={item.questionText}/>
                                         }

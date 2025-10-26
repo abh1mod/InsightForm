@@ -6,6 +6,7 @@ import crypto from 'crypto';
 const userSchema = new mongoose.Schema({
     name:{
         type : String,
+        unique: true,
         required:[true, "Name is required"],
     },
     email:{
@@ -55,6 +56,8 @@ const userSchema = new mongoose.Schema({
     resetPasswordToken: String, // Token for resetting password
     resetPasswordTokenExpiry: Date, // Expiry time for the reset password token
     lastTokenSentAt: Date, // Timestamp of when the last verification or reset token was sent
+
+    lastNotificationCheck: { type: Date, default: Date.now }, // Timestamp of the last time the user checked notifications
 
     // Fields for daily password reset limit
     passwordResetAttempts: { type: Number, default: 5 }, // Number of allowed password reset attempts within a day

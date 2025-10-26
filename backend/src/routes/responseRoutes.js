@@ -5,6 +5,7 @@ import Response from "../models/response.model.js";
 import limiter from "../middleware/rateLimiter.js";
 import mongoose from "mongoose";
 import AnonymousSubmission from "../models/anonymousSubmission.model.js";
+import Notification from "../models/notification.model.js";
 import jwtAuthorisation from "../middleware/jwtAuthorisation.js";
 const router = express.Router();
 
@@ -19,6 +20,11 @@ function isNumberBetween1And5(str) {
   //    - !isNaN(num) checks if the string was a number at all.
   //    - num >= 1 && num <= 5 checks the range.
   return !isNaN(num) && num > 0 && num <= 5;
+}
+
+function isNumber(str){
+    const num = Number(str);
+    return !isNaN(num);
 }
 
 // This route allows users to view a specific form by its ID.
@@ -68,11 +74,18 @@ router.post("/submitResponse/:formId", limiter, async (req, res) => {
     const session = await mongoose.startSession();
     try{
         const formId = req.params.formId; // the form ID from the URL
+
         // if formId is not valid or not live
         const form = await Form.findOne({ _id: formId, isLive: true });
         if(!form){
             return res.status(404).json({success: false, message: "Form Not Found or Not Live"});
         }
+        const notification = {
+            userName: "unknown",
+            userId: form.userId,
+            formId: formId,
+            formTitle: form.title
+        };
         const responseData = req.body.responseData; // the response data from the user
         // if responseData is not present
         if(!responseData){
@@ -88,14 +101,11 @@ router.post("/submitResponse/:formId", limiter, async (req, res) => {
             if(!user){
                 return res.status(404).json({succes: false, message: "User not found"});
             }
-            var response_userId = null;
-            if(!form.isAnonymous){
-                response_userId = await Response.findOne({formId: formId, userId: responseData.userId});
-            }
-            else{
-                response_userId = await AnonymousSubmission.findOne({formId: formId, userId: responseData.userId});
-            }
-            if(response_userId){
+            notification.userName = user.name;
+            // check if there is any record of that user submitting that response in either Response or anonymousSubmission
+            const response_userId1 = await Response.findOne({formId: formId, userId: responseData.userId});
+            const response_userId2 = await AnonymousSubmission.findOne({formId: formId, userId: responseData.userId});
+            if(response_userId1 || response_userId2){
                 return res.status(400).json({success: false, message: "User has already submitted response"});
             }
         }
@@ -121,10 +131,14 @@ router.post("/submitResponse/:formId", limiter, async (req, res) => {
             // if question is MCQ then check if answer is one of the options
             // if question is rating then check if answer is a number between 1 and 10
             // if question is short_answer then check if answer is not empty
+            // if question is number then check if answer is a valid number
             if(answer.questionType === "mcq" && !question.options.includes(answer.answer)){
                 return res.status(400).json({success: false, message: 'not correct response', questionId: answer.questionId});
             }
             else if(answer.questionType === "rating" && isNumberBetween1And5(answer.answer) === false){
+                return res.status(400).json({success: false, message: 'not correct response', questionId: answer.questionId});
+            }
+            else if(answer.questionType === "number" && isNumber(answer.answer) === false){
                 return res.status(400).json({success: false, message: 'not correct response', questionId: answer.questionId});
             }
             else if(answer.questionType === "text" && answerText.length === 0){
@@ -150,7 +164,22 @@ router.post("/submitResponse/:formId", limiter, async (req, res) => {
         await response.save({session});
         // update the lastEdited field of the form to current date and time
         await Form.findByIdAndUpdate(formId, { lastEdited: Date.now()}, { session });
+        // saves the notification
+        const newNotification = new Notification(notification);
+        await newNotification.save({session});
         await session.commitTransaction();
+
+        const { io } = req;
+
+        // Emit the event ONLY to that specific user
+        io.to(form.userId.toString()).emit('new_notification', {
+            // Send the full notification object or just the necessary data
+            userName: newNotification.userName,
+            formTitle: newNotification.formTitle,
+            createdAt: newNotification.createdAt
+        });
+        console.log(`Notification sent via socket to user ${form.userId}`);
+
         return res.status(201).json({success: true, message: "Response submitted successfully"});
     }
     catch(error){
