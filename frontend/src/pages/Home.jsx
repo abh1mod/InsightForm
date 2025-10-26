@@ -436,9 +436,9 @@ const Home = () => {
                         <div>
                             <h3 className="text-gray-100 text-lg font-semibold mb-4">Quick Links</h3>
                             <div className="space-y-3">
-                                <Link to="/about" className="block text-gray-100 hover:text-gray-900 transition-colors">About Us</Link>
-                                <Link to="/contact" className="block text-gray-100 hover:text-gray-900 transition-colors">Contact</Link>
-                                <Link to="/login" className="block text-gray-100 hover:text-gray-900 transition-colors">Login</Link>
+                                <Link to="/about" className="block text-gray-600 hover:text-gray-900 transition-colors">About Us</Link>
+                                <Link to="/contact" className="block text-gray-600 hover:text-gray-900 transition-colors">Contact</Link>
+                                <Link to="/login" className="block text-gray-600 hover:text-gray-900 transition-colors">Login</Link>
                             </div>
                         </div>
                     </div>

@@ -269,6 +269,18 @@ useEffect(() => {
                 />
               )}
 
+              {/* Number */}
+              {q.questionType === "number" && (
+                <input
+                  type="number"
+                  disabled={isPreview}
+                  placeholder="Your answer..."
+                  className="mt-4 w-full border border-gray-300 rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y min-h-[80px]"
+                  value={responses[q._id] || ""}
+                  onChange={(e) => handleChange(q._id, e.target.value)}
+                />
+              )}
+
               {/* MCQ */}
               {q.questionType === "mcq" && (
                 <div>

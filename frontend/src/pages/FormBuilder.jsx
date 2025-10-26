@@ -1,12 +1,28 @@
-import React, { use, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-toastify";
 import { useAppContext } from "../context/ContextAPI";
 import useDebounce from "../debounceHook/useDebounce";
-import AutoResizeTextarea from "../components/AutoResizeTextarea";
 import HamsterLoader from "../components/HamsterLoader";
 import { useNavigate } from "react-router-dom";
+import SortableItem from "../components/sortableItem";
+import { Item } from "../components/item";
+import {
+  DndContext,
+  DragOverlay,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
 
 import {
   PlusIcon,
@@ -36,12 +52,18 @@ const FormBuilder = () => {
   
   const { formID } = useParams();
 
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+  const [activeId, setActiveId] = useState(null);
   const [formState, setFormState] = useState(null);
   const { token, logout } = useAppContext();
   const [loading, setLoading] = useState(false);
   const [showDraftSaved, setShowDraftSaved] = useState(false);
-  const [animatingQuestionId, setAnimatingQuestionId] = useState(null);
-  const [replacedQuestionId, setReplacedQuestionId] = useState(null);
+  
 
   const [formTitle, setFormTitle] = useState("Untitled Form");
   const [formDescription, setFormDescription] = useState("Form Description");
@@ -196,8 +218,6 @@ const FormBuilder = () => {
                         toast.error(error.response.data.message);
                     }
                 }
-
-          
         }
       };
       updateFormData();
@@ -283,121 +303,6 @@ const FormBuilder = () => {
     }, 100);
   };
 
-  const removeQuestion = (qIndex) => {
-    const newQuestions = [...questions];
-    newQuestions.splice(qIndex, 1);
-    setQuestions(newQuestions);
-  };
-
-  const handleQuestionTextChange = (qIndex, newText) => {
-    const newQuestions = [...questions];
-    newQuestions[qIndex].questionText = newText;
-    setQuestions(newQuestions);
-  };
-
-  const toggleQuestionRequired = (qIndex) => {
-    const newQuestions = [...questions];
-    newQuestions[qIndex].required = !newQuestions[qIndex].required;
-    setQuestions(newQuestions);
-  };
-
-  const addOptionToQuestion = (qIndex) => {
-    const newQuestions = [...questions];
-    newQuestions[qIndex].options.push(
-      `Option ${newQuestions[qIndex].options.length + 1}`
-    );
-    setQuestions(newQuestions);
-  };
-
-  const removeOptionFromQuestion = (qIndex, oIndex) => {
-    const newQuestions = [...questions];
-    newQuestions[qIndex].options.splice(oIndex, 1);
-    setQuestions(newQuestions);
-  };
-
-  const handleOptionTextChange = (qIndex, oIndex, newText) => {
-    const newQuestions = [...questions];
-    newQuestions[qIndex].options[oIndex] = newText;
-    setQuestions(newQuestions);
-  };
-
-
-  // Question reordering functions with animations
-  const moveQuestionUp = (index) => {
-    if (index > 0) {
-      const currentQuestion = questions[index];
-      const previousQuestion = questions[index - 1];
-      
-      // Ensure questions have IDs
-      if (!currentQuestion?.id || !previousQuestion?.id) {
-        return;
-      }
-      
-      // Set animation states first
-      setAnimatingQuestionId(currentQuestion.id);
-      setReplacedQuestionId(previousQuestion.id);
-      
-      // Wait a bit for animation to start, then swap
-      setTimeout(() => {
-        const newQuestions = [...questions];
-        [newQuestions[index - 1], newQuestions[index]] = [newQuestions[index], newQuestions[index - 1]];
-        setQuestions(newQuestions);
-      }, 50);
-      
-      // Clear animations after they complete
-      setTimeout(() => {
-        setAnimatingQuestionId(null);
-        setReplacedQuestionId(null);
-      }, 400);
-    }
-  };
-
-  const moveQuestionDown = (index) => {
-    if (index < questions.length - 1) {
-      const currentQuestion = questions[index];
-      const nextQuestion = questions[index + 1];
-      
-      // Ensure questions have IDs
-      if (!currentQuestion?.id || !nextQuestion?.id) {
-        return;
-      }
-      
-      // Set animation states first
-      setAnimatingQuestionId(currentQuestion.id);
-      setReplacedQuestionId(nextQuestion.id);
-      
-      // Wait a bit for animation to start, then swap
-      setTimeout(() => {
-        const newQuestions = [...questions];
-        [newQuestions[index], newQuestions[index + 1]] = [newQuestions[index + 1], newQuestions[index]];
-        setQuestions(newQuestions);
-      }, 50);
-      
-      // Clear animations after they complete
-      setTimeout(() => {
-        setAnimatingQuestionId(null);
-        setReplacedQuestionId(null);
-      }, 400);
-    }
-  };
-
-  const renderQuestionIcon = (type) => {
-    switch (type) {
-      case "mcq":
-        return <Squares2X2Icon className="w-5 h-5" />;
-      case "text":
-        return <PencilSquareIcon className="w-5 h-5" />;
-      case "rating":
-        return <StarIcon className="w-5 h-5" />;
-      case "number":
-        return <HashtagIcon className="w-5 h-5" />;
-      case "date":
-        return <CalendarDaysIcon className="w-5 h-5" />;
-      default:
-        return <QuestionMarkCircleIcon className="w-5 h-5" />;
-    }
-  };
-
   const handleGenerateQuestion = async () => {
     setLoading(true);
     try {
@@ -447,6 +352,24 @@ const FormBuilder = () => {
     else document.body.style.overflow = "auto";
   }, [loading]);
 
+  function handleDragEnd(event) {
+    const {active, over} = event;
+    
+    if (active.id !== over.id) {
+      setQuestions((items) => {
+        const oldIndex = items.findIndex(item => item.id === active.id);
+        const newIndex = items.findIndex(item => item.id === over.id);
+        
+        return arrayMove(items, oldIndex, newIndex);
+      });
+    }
+    setActiveId(null);
+  }
+
+  function handleDragStart(event) {
+    const {active} = event;
+    setActiveId(active.id);
+  }
 
 
   return (
@@ -477,8 +400,11 @@ const FormBuilder = () => {
                 icon: <StarIcon className="w-5 h-5 mr-2 text-purple-500" />,
                 key: "rating",
               },
-              /* { type: 'Numbers', icon: <HashtagIcon className="w-5 h-5 mr-2 text-yellow-500" />, key: 'number' },
-            { type: 'Date', icon: <CalendarDaysIcon className="w-5 h-5 mr-2 text-red-500" />, key: 'date' }, */
+              {
+                type: 'Numbers',
+                icon: <HashtagIcon className="w-5 h-5 mr-2 text-yellow-500" />,
+                key: 'number',
+              }
             ].map((item) => (
               <div
                 key={item.key}
@@ -620,139 +546,28 @@ const FormBuilder = () => {
                 </p>
               </div>
             ) : (
-              questions.map((question, index) => (
-                <div
-                  key={question.id}
-                  className={`bg-white p-6 rounded-xl shadow-lg border-l-4 border-blue-500 transition-all duration-300 hover:shadow-xl ${
-                    animatingQuestionId === question.id ? 'question-swap-up' : 
-                    replacedQuestionId === question.id ? 'question-being-replaced-up' : ''
-                  }`}
+              <DndContext 
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+                onDragStart={handleDragStart}
+              >
+                <SortableContext 
+                  items={questions.map(question => question.id)}
+                  strategy={verticalListSortingStrategy}
                 >
-                  {/* Question Header with Arrow Buttons */}
-                  <div className="flex justify-between items-center mb-4">
-                    <div className="flex items-center flex-1">
-                      {renderQuestionIcon(question.questionType)}
-
-                      <AutoResizeTextarea
-                        value={question.questionText}
-                        onChange={(e) =>
-                          handleQuestionTextChange(index, e.target.value)
-                        }
-                        placeholder="Enter your question"
-                      />
-                    </div>
-
-                    <div className="flex items-center space-x-3 ml-4">
-                      {/* Arrow Buttons */}
-                      <div className="flex flex-col space-y-1">
-                        <button
-                          onClick={() => moveQuestionUp(index)}
-                          disabled={index === 0}
-                          className={`p-1 rounded transition-colors ${
-                            index === 0 
-                              ? 'text-gray-300 cursor-not-allowed' 
-                              : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50'
-                          }`}
-                        >
-                          <ChevronUpIcon className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => moveQuestionDown(index)}
-                          disabled={index === questions.length - 1}
-                          className={`p-1 rounded transition-colors ${
-                            index === questions.length - 1 
-                              ? 'text-gray-300 cursor-not-allowed' 
-                              : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50'
-                          }`}
-                        >
-                          <ChevronDownIcon className="w-4 h-4" />
-                        </button>
-                      </div>
-
-                      <TrashIcon
-                        onClick={() => removeQuestion(index)}
-                        className="w-5 h-5 text-gray-400 hover:text-red-500 cursor-pointer"
-                      />
-                      <span className="text-sm text-gray-600">Required</span>
-                      <button
-                        className={`w-12 h-6 flex items-center rounded-full p-0.5 transition-colors duration-300 
-                ${question.required ? "bg-blue-500" : "bg-gray-300"}`}
-                        onClick={() => toggleQuestionRequired(index)}
-                      >
-                        <span
-                          className={`h-5 w-5 bg-white rounded-full shadow-md transform transition-transform duration-300 
-                  ${question.required ? "translate-x-6" : "translate-x-0"}`}
-                        />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Options for Multiple Choice/Rating */}
-                  {question.questionType === "mcq" && (
-                    <div className="space-y-3 mt-4 ml-6">
-                      {question.options.map((option, oIndex) => (
-                        <div key={oIndex} className="flex items-center group">
-                          <input type="radio" disabled className="mr-3" />
-                          <>
-                            <input
-                              type="text"
-                              value={option}
-                              onChange={(e) =>
-                                handleOptionTextChange(
-                                  index,
-                                  oIndex,
-                                  e.target.value
-                                )
-                              }
-                              className="flex-1 p-1 border-b border-transparent focus:outline-none focus:border-blue-400 focus:bg-gray-50 rounded-sm text-gray-700"
-                            />
-                            <XMarkIcon
-                              onClick={() =>
-                                removeOptionFromQuestion(index, oIndex)
-                              }
-                              className="w-5 h-5 text-gray-400 ml-2 cursor-pointer hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                            />
-                          </>
-                        </div>
-                      ))}
-                      <div
-                        className="flex items-center max-w-[40%] text-gray-400 italic cursor-pointer"
-                        onClick={() => addOptionToQuestion(index)}
-                      >
-                        <input
-                          type="text"
-                          readOnly
-                          value="Add Option"
-                          className="bg-transparent focus:outline-none flex-1 p-1"
-                        />
-                        <PlusIcon className="w-5 h-5 text-gray-400 ml-2 hover:text-blue-500" />
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Placeholder for other question types */}
-                  {question.questionType === "text" && (
-                    <div className="mt-4 ml-6">
-                      <input
-                        type="text"
-                        placeholder="User will enter text here..."
-                        disabled
-                        className="w-full p-2 border-b border-gray-200 rounded-md bg-gray-50 text-gray-500 italic"
-                      />
-                    </div>
-                  )}
-                  {question.questionType === "rating" && (
-                    <div className="mt-4 ml-6">
-                      <input
-                        type="text"
-                        placeholder="User will provide rating "
-                        disabled
-                        className="w-full p-2 border-b border-gray-200 rounded-md bg-gray-50 text-gray-500 italic"
-                      />
-                    </div>
-                  )}
-                </div>
-              ))
+                  {questions.map((question, index) => (
+                    <SortableItem key={question.id} question={question} index={index} questions={questions} setQuestions={setQuestions} />
+                  ))}
+                </SortableContext>
+                <DragOverlay>
+                  {activeId ? (
+                    <Item 
+                      id={activeId} 
+                    />
+                  ) : null}
+                </DragOverlay>
+              </DndContext>
             )}
           </div>
           {/* Spacer for floating button */}

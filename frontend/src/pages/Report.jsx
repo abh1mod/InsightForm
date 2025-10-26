@@ -16,6 +16,7 @@ import {
   Legend,
 } from 'chart.js';
 import { Bar } from 'react-chartjs-2';
+
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -29,6 +30,8 @@ const ratingLabels = ["0.5", "1", "1.5", "2", "2.5", "3", "3.5", "4", "4.5", "5"
 
 const Report = () => {
     const carouselRef = useRef(null);
+    const [deleteLoading, setDeleteLoading] = useState(false);
+    const [refetchFlag, setRefetchFlag] = useState(0);
     const { token, logout } = useAppContext();
     const [newReportLoading, setNewReportLoading] = useState(false);
     const [filter, setFilter] = useState("");
@@ -36,6 +39,7 @@ const Report = () => {
     const [filterInput, setFilterInput] = useState("");
     const [chartData, setChartData] = useState([]);
     const [data, setData] = useState([]);
+    const dataRef = useRef(data);
     const [columns, setColumns] = useState([]);
     const [downloading, setDownloading] = useState(false);
     const { formID } = useParams();
@@ -43,13 +47,23 @@ const Report = () => {
     const [loading, setLoading] = useState({summarySuggestionsLoading: true, rawDataLoading: true, chartDataLoading: true});
     const [pageCount, setPageCount] = useState(0);
     const [pagination, setPagination] = useState({pageIndex: 0, pageSize: 10});
+    const paginationRef = useRef(pagination);
     const [sorting, setSorting] = useState([{id: 'createdAt', desc: true}]); // default sorting by createdAt 
     const [maxPageIndex, setMaxPageIndex] = useState(1);
     const [responses, setResponses] = useState({start: 0, end: 0, totalResponses: 0});
 
+    // for stale closure issues in handleResponseDelete
+    useEffect(() => {
+        dataRef.current = data;
+        paginationRef.current = pagination;
+    }, [data, pagination]);
+
     useEffect(() => {
         const fetchSummarySuggestions = async () => {
             try{
+                setLoading((prev) => {
+                    return {...prev, summarySuggestionsLoading: true};
+                });
                 const response = await axios.get(`http://localhost:3000/api/report/${formID}/latest-report`, {
                     headers: {
                         Authorization: `Bearer ${token}`
@@ -81,8 +95,92 @@ const Report = () => {
             }
         }
 
+        const fetchColumns = async () => {
+            try{
+                const response = await axios.get(`http://localhost:3000/api/report/${formID}/table-structure`, {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                });
+                if(response.data.success){
+                    const rawColumn = response.data.columnHeaders.map((col) => {
+                        const cellRenderer = ({ getValue }) => {
+                            const value = getValue();
+
+                            // 1. Check if it's the 'createdAt' column
+                            if (col.accessorKey === 'createdAt') {
+                                const date = new Date(value);
+                                // Use locale-specific formatting
+                                return date.toLocaleString();
+                            }
+
+                            // 2. For ALL other columns, check if the value is empty
+                            if (value === null || value === undefined || value === '') {
+                                return <span className="text-gray-400 italic">No response</span>;
+                            }
+
+                            // 3. Otherwise, just return the value
+                            return String(value);
+                        };
+                        // --- End of Renderer Logic ---
+
+                        // Return the column definition with the renderer
+                        return {
+                            ...col,
+                            cell: cellRenderer // Assign the function we just defined
+                        };
+                    });
+                    const action = {
+                        header: 'Action',
+                        accessorKey: 'Action',
+                        cell: ({row}) => {
+                            return (
+                                <button
+                                    onClick={()=>handleResponseDelete(row.original.response_id)}
+                                    disabled={deleteLoading}
+                                    className="inline-flex items-center gap-2 rounded-md bg-red-600 px-4 py-2 text-white text-sm font-medium hover:bg-red-700 active:bg-red-800 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:bg-red-300 disabled:opacity-75 disabled:cursor-not-allowed"
+                                    aria-label="Clear filter"
+                                    >
+                                    Delete
+                                </button>
+                            );
+                        }
+                    }
+                    const finalColumns = [...rawColumn, action];
+                    setColumns(finalColumns);
+                }
+            }
+            catch(error){
+                setColumns([]);
+                if(error.response){
+                    if(error.response.data.message === "invalid/expired token" && token){
+                        toast.error("Session expired. Please log in again.");
+                        logout();
+                    }
+                    else{
+                        toast.error(error.response.data.message || "Failed to fetch raw data");
+                    }
+                }
+                else{
+                    toast.error("Failed to fetch raw data");
+                }
+            }
+        }
+
+        fetchSummarySuggestions();
+        fetchColumns();
+    }, []);
+
+    useEffect(() => {
+        fetchRawData();
+    }, [sorting, pagination, columns, filter, refetchFlag]);
+
+    useEffect(() => {
         const fetchChartData = async () => {
             try{
+                setLoading((prev) => {
+                    return {...prev, chartDataLoading: true};
+                });
                 const response = await axios.get(`http://localhost:3000/api/report/${formID}/chart-data`, {
                     headers: {
                         Authorization: `Bearer ${token}`
@@ -115,68 +213,26 @@ const Report = () => {
                 });
             }
         }
-        const fetchColumns = async () => {
-            try{
-                const response = await axios.get(`http://localhost:3000/api/report/${formID}/table-structure`, {
-                    headers: {
-                        Authorization: `Bearer ${token}`
-                    }
-                });
-                if(response.data.success){
-                    const rawColumn = response.data.columnHeaders.map((col) => {
-                        const cellRenderer = ({ getValue }) => {
-                            const value = getValue();
-
-                            // 1. Check if it's the 'createdAt' column
-                            if (col.accessorKey === 'createdAt') {
-                                const date = new Date(value);
-                                // Use locale-specific formatting
-                                return date.toLocaleString();
-                            }
-
-                            // 2. For ALL other columns, check if the value is empty
-                            if (value === null || value === undefined || value === '') {
-                                return <span className="text-gray-400 italic">No response</span>;
-                            }
-
-                            // 3. Otherwise, just return the value
-                            return String(value);
-                        };
-                    // --- End of Renderer Logic ---
-
-                    // Return the column definition with the renderer
-                    return {
-                        ...col,
-                        cell: cellRenderer // Assign the function we just defined
-                    };
-                    })
-                    setColumns(rawColumn);
-                }
-            }
-            catch(error){
-                setColumns([]);
-                if(error.response){
-                    if(error.response.data.message === "invalid/expired token" && token){
-                        toast.error("Session expired. Please log in again.");
-                        logout();
-                    }
-                    else{
-                        toast.error(error.response.data.message || "Failed to fetch raw data");
-                    }
-                }
-                else{
-                    toast.error("Failed to fetch raw data");
-                }
-            }
-        }
-
-        fetchSummarySuggestions();
         fetchChartData();
-        fetchColumns();
-    }, []);
+    }, [refetchFlag]);
+    
+    const table = useReactTable({
+        data,
+        columns,
+        getCoreRowModel: getCoreRowModel(),
+        manualSorting: true,
+        manualPagination: true,
+        enableSortingRemoval: false,
+        pageCount,
+        state:{
+            pagination,
+            sorting
+        },
+        onPaginationChange: setPagination,
+        onSortingChange: setSorting,
+    });
 
-    useEffect(() => {
-        const fetchRawData = async () => {
+    const fetchRawData = async () => {
             try{
                 setLoading((prev) => {
                     return {...prev, rawDataLoading: true};
@@ -196,7 +252,10 @@ const Report = () => {
                             totalResponses: response.data.totalResponses
                         });
                         if(pagination.pageIndex + 1 > maxPageIndex + 3){
-                            setMaxPageIndex(pagination.pageIndex);
+                            setMaxPageIndex(pagination.pageIndex + 1);
+                        }
+                        else if(pagination.pageIndex + 1 < maxPageIndex){
+                            setMaxPageIndex((prev) => Math.max(prev - 4, 1));
                         }
                     }
                 }
@@ -222,24 +281,6 @@ const Report = () => {
                 });
             }
         }
-        fetchRawData();
-    }, [sorting, pagination, columns, filter]);
-    
-    const table = useReactTable({
-        data,
-        columns,
-        getCoreRowModel: getCoreRowModel(),
-        manualSorting: true,
-        manualPagination: true,
-        enableSortingRemoval: false,
-        pageCount,
-        state:{
-            pagination,
-            sorting
-        },
-        onPaginationChange: setPagination,
-        onSortingChange: setSorting,
-    });
 
     async function generateReport(){
         try{
@@ -311,6 +352,32 @@ const Report = () => {
                     }
                 }
             }
+            else if(chartData[question].questionType === 'number'){
+                return {
+                    questionType: chartData[question].questionType,
+                    chartOptions: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                            position: 'top',
+                            },
+                            title: {
+                            display: true,
+                            text: chartData[question].questionText,
+                            }
+                        },
+                        maintainAspectRatio: false
+                    },
+                    data: {
+                        labels: chartData[question].bins,
+                        datasets: [{
+                            label: "Responses",
+                            data: chartData[question].binCounts,
+                            backgroundColor: 'rgba(255, 159, 64, 0.6)'
+                        }]
+                    }
+                };
+            }
             else if(chartData[question].questionType === 'rating'){
                 return {
                     questionType: chartData[question].questionType,
@@ -377,6 +444,49 @@ const Report = () => {
         scrollToSlide(current + 1);
     };
 
+    const handleResponseDelete = async (row) => {
+        try{
+            setDeleteLoading(true);
+            const response = await axios.delete(`http://localhost:3000/api/response/${formID}/response-delete/${row}`, {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+            if(response.data.success){
+                toast.success(response.data.message || "Response deleted successfully");
+                console.log(data.length);
+                console.log(pagination.pageIndex);
+                
+                if(dataRef.current.length === 1 && paginationRef.current.pageIndex > 0){
+                    setPagination((prev) => {
+                        return {...prev, pageIndex: prev.pageIndex - 1};
+                    });
+                }
+                else{
+                    setRefetchFlag((prev) => prev + 1);
+                }
+            }
+        }
+        catch(error){
+            console.log(error);
+            if(error.response){
+                if(error.response.data.message === "invalid/expired token" && token){
+                    toast.error("Session expired. Please log in again.");
+                    logout();
+                }
+                else{
+                    toast.error(error.response.data.message || "Failed to generate report");
+                }
+            }
+            else{
+                toast.error("Failed to generate report");
+            }
+        }
+        finally{
+            setDeleteLoading(false);
+        }
+    };
+
     const downloadData = async () => {
         try{
             setDownloading(true);
@@ -429,6 +539,13 @@ const Report = () => {
         if(filterInput.trim() === filter.trim()) return;
         setSearching(true);
         setFilter(filterInput.trim());
+        setPagination({pageIndex: 0, pageSize: 10});
+    }
+
+    const handleClearFilter = () => {
+        setFilterInput("");
+        setSearching(true);
+        setFilter("");
         setPagination({pageIndex: 0, pageSize: 10});
     }
 
@@ -512,6 +629,15 @@ const Report = () => {
                                 value={filterInput}
                                 onChange={(e) => setFilterInput(e.target.value)}
                             />
+                            {filter && (
+                                <button
+                                onClick={handleClearFilter}
+                                className="px-2 text-gray-500 hover:text-gray-800"
+                                aria-label="Clear filter"
+                                >
+                                &#x2715; {/* Unicode 'X' symbol */}
+                                </button>
+                            )}
                             <button disabled={searching} onClick={startFiltering} className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-white text-sm font-medium hover:bg-indigo-700 active:bg-indigo-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:bg-indigo-300 disabled:opacity-75 disabled:cursor-not-allowed">Search</button>
                             <button disabled={downloading} className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-white text-sm font-medium hover:bg-indigo-700 active:bg-indigo-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:bg-indigo-300 disabled:opacity-75 disabled:cursor-not-allowed" onClick={downloadData}>Export CSV</button>
                         </div>
@@ -534,7 +660,7 @@ const Report = () => {
                                         {headerGroup.headers.map(header => {
                                             {if(header.column.columnDef.header === 'createdAt'){
                                                 return (
-                                                    <th key={header.id} onClick={header.column.getToggleSortingHandler()} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hover:cursor-pointer">
+                                                    <th key={header.id} onClick={header.column.getToggleSortingHandler()} className="min-w-[15rem] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hover:cursor-pointer">
                                                         <div className="inline-flex w-full items-center gap-2">
                                                             {flexRender(
                                                                 header.column.columnDef.header,
@@ -551,7 +677,7 @@ const Report = () => {
                                                 )
                                             }else{
                                                 return (
-                                                    <th key={header.id} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    <th key={header.id} className="min-w-[15rem] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                         <div className="inline-flex w-full items-center gap-2">
                                                             {flexRender(
                                                                 header.column.columnDef.header,
@@ -621,7 +747,7 @@ const Report = () => {
                             {chartDataMemo.map((item, i) => (
                                 <div id={`slide-${i}`} data-slide="true" key={i} className="relative snap-center shrink-0 w-full max-w-[100%] rounded-md border border-gray-200 p-4 h-[27rem]">
                                     <div className="absolute top-0 left-0 w-full h-full">
-                                        {item.questionType === 'mcq' || item.questionType === 'rating'? 
+                                        {item.questionType === 'mcq' || item.questionType === 'rating' || item.questionType === 'number' ? 
                                             <Bar options={item.chartOptions} data={item.data}/> :
                                             <Bubble data={item.words} title={item.questionText}/>
                                         }
