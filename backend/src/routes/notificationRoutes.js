@@ -12,7 +12,7 @@ router.get("/get-notifications", async (req, res) =>{
         // Fetch last checked time
         const lastchecked = await User.findOne({_id: req.user.id}).select("lastNotificationCheck");
         // Fetch notifications
-        const notifications = await Notification.find({userId: req.user.id});
+        const notifications = await Notification.find({userId: req.user.id}).sort({createdAt: -1});
         let unReadCount = 0;
         // Calculate unread notifications
         notifications.forEach((notification) => {
