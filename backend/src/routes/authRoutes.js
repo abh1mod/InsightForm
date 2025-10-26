@@ -303,7 +303,7 @@ router.post("/forgot-password", limiter, blockIfLoggedIn, async (req, res) => {
         if(!user) return res.status(400).json({success: false, message: "Error finding mail"});
 
         // check if user has exceeded daily limit for password reset
-        if(user.passwordResetAttemptsExpires < Date.now()){
+        /*if(user.passwordResetAttemptsExpires < Date.now()){
             user.passwordResetAttempts = 5; // reset attempts if expiry time has passed
             user.passwordResetAttemptsExpires = Date.now() + 24*60*60*1000; // set new expiry time for next 24 hours
             await user.save(); // save the updated user document
@@ -318,7 +318,7 @@ router.post("/forgot-password", limiter, blockIfLoggedIn, async (req, res) => {
         const twoMinutes = 2 * 60 * 1000;
         if (user.lastTokenSentAt && (Date.now() - user.lastTokenSentAt.getTime()) < twoMinutes) {
             return res.status(400).json({success: false, message: "Please wait before requesting another password reset email"});
-        }
+        }*/
         
         const token = user.generateResetPasswordToken();
         user.lastTokenSentAt = Date.now(); // update the last sent time
@@ -348,7 +348,7 @@ router.post("/forgot-password", limiter, blockIfLoggedIn, async (req, res) => {
 });
 
 // route to reset the password using the token sent to the user's email
-// this path is callled by frontend when user clicks on the reset password link in their email
+// this path is called by frontend when user clicks on the reset password link in their email
 // it expects the new password in the request body and the token in the URL
 // if the token is valid and not expired, it updates the user's password
 // and clears the reset password token and its expiry time

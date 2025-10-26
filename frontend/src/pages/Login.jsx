@@ -21,9 +21,20 @@ const Login = () => {
   const [signupPassword, setSignUpPassword] = useState("");
 
   const [showSignup, setShowSignup] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState(false);
   // Removed sendingEmail state
   const [activeResendLink, setActiveResendLink] = useState(false);
 
+  useEffect(()=>{
+    setError('');
+    setLoading(false);
+    setLoginEmail("");
+    setLoginPassword("");
+    setUsername("");
+    setSignUpEmail("");
+    setSignUpPassword("");
+    setActiveResendLink(false);
+  },[showSignup])
   // Removed emailRegex
 
   // If user is already logged in, redirect to dashboard
@@ -58,6 +69,10 @@ const Login = () => {
         navigate("/dashboard");
       }
     } catch (err) {
+      if(err.response?.data?.message === "Email not verified"){
+        console.log("YES");
+        setActiveResendLink(true);
+      }
       console.error(err.response?.data || err.message);
       setError(err.response?.data?.message || "Login failed!");
     } finally {
@@ -79,14 +94,18 @@ const Login = () => {
       });
 
       if (res.data.success) {
-        console.log("SignUp Successfully")
+        console.log(res)
         toast.success(res.data.message || "Signup successful! Please verify your email before logging in.");
         setActiveResendLink(true);
       }
     } catch (err) {
+        if(err.response?.data?.message === "Error sending verification email"){
+          setActiveResendLink(true);
+        }
       console.error(err.response?.data || err.message);
       setError(err.response?.data?.message || "Signup failed!");
     } finally {
+      // setActiveResendLink(true);
       setLoading(false);
     }
   };
@@ -96,31 +115,6 @@ const Login = () => {
     // open backend Google OAuth flow
     window.location.href = "http://localhost:3000/api/auth/google";
   };
-
-  // Removed handlePasswordReset function
-
-  // handleResendVerification 
-  const handleResendVerification = async () =>{
-    setSendingEmail(true);
-    setError("");
-    if (!emailRegex.test(signupEmail)) {
-      setError("Please enter a valid email address.");
-      setSendingEmail(false);
-      return;
-    }
-      try{
-        const res = await axios.post("http://localhost:3000/api/auth/resend-verification",{
-          email : signupEmail
-        });
-        if(res.data.success){
-          toast.success(res.data.message || "Verification email resent!");
-        }
-      }catch(err){
-        console.error(err);
-        toast.error(err.response?.data?.message || "Error resending verification email.");
-      }
-      setSendingEmail(false);
-  }
 
 
   return (
@@ -156,6 +150,17 @@ const Login = () => {
             </Link>
           </div>
           {/* --- END OF MINIMAL CHANGE --- */}
+                      {activeResendLink &&
+            <div className="mt-4 text-center">
+              <button
+                type="button"
+                onClick={()=>navigate("/resend-verification")}
+                // disabled={sendingEmail} // Disable if adding separate loading state
+                className="text-sm bg-transparent border-none text-gray-600 hover:underline hover:text-blue-600 cursor-pointer disabled:text-gray-400 disabled:cursor-not-allowed"
+              >
+                Resend Confirmation Link
+              </button>
+            </div>}
         </>}
 
         {showSignup && <>
@@ -175,7 +180,7 @@ const Login = () => {
             <div className="mt-4 text-center">
               <button
                 type="button"
-                onClick={handleResendVerification}
+                onClick={()=>navigate("/resend-verification")}
                 // disabled={sendingEmail} // Disable if adding separate loading state
                 className="text-sm bg-transparent border-none text-gray-600 hover:underline hover:text-blue-600 cursor-pointer disabled:text-gray-400 disabled:cursor-not-allowed"
               >
@@ -210,7 +215,7 @@ const Login = () => {
 
           {/* Toggle Link - Unchanged */}
           <p
-            onClick={() => { setShowSignup(!showSignup); setError(''); }}
+            onClick={() => { setShowSignup(!showSignup); }}
             className="text-sm text-gray-600 text-center mt-6 hover:underline hover:text-blue-600 cursor-pointer" // Adjusted mt
           >
             {showSignup ? "Already have an account? Log In" : "Don't have an Account? Sign Up"}
