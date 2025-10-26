@@ -7,7 +7,8 @@ const QuestionSchema = new mongoose.Schema({
     enum: [
       'text',
       'mcq',
-      'rating'
+      'rating',
+      'number',
     ],
     required: true
   }, // Type of question

@@ -16,6 +16,7 @@ const questionSuggestionPrompt = (objective, neededQuestionData) => {
 
                     Task:
                     Based on the objective and existing questions, suggest 3 new, relevant, and distinct questions to add to the form.
+                    Rating questions should be on a scale of 1 to 5.
         `;
     console.log(text);
     

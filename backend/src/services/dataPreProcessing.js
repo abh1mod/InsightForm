@@ -4,7 +4,7 @@ import stopword from 'stopword';
 // service to preprocess form response data for report generation
 // input: array of response documents from the database
 // output: processed data object containing aggregated information for each question
-const dataPreProcessing = async (allResponses) => {
+const dataPreProcessing = async (allResponses, context) => {
     // object to hold processed data
     const processedData = {};
     // iterate through each response document
@@ -55,6 +55,18 @@ const dataPreProcessing = async (allResponses) => {
                         }
                     };
                 }
+                else if(ans.questionType === 'number'){
+                    // initialize structure for number based question
+                    processedData[key] = {
+                        questionText: ans.questionText, // Store the question text
+                        questionType: "number", // Type of question
+                        totalResponses: 0, // Total number of responses received for this question
+                        average: 0, // Average number calculated later
+                        min_value: Infinity, // Minimum value
+                        max_value: -Infinity, // Maximum value
+                        answers: [] // Array to store all number answers
+                    };
+                }
                 else{
                     // initialize structure for text-based question (short answer)
                     processedData[key] = {
@@ -72,6 +84,13 @@ const dataPreProcessing = async (allResponses) => {
             // update count or store answer based on question type
             if(ans.questionType === 'mcq' || ans.questionType === 'rating'){
                 processedData[key].distribution.count[ans.answer] += 1;
+            }
+            else if(ans.questionType === 'number'){
+                const numAnswer = parseFloat(ans.answer);
+                processedData[key].min_value = Math.min(processedData[key].min_value, numAnswer);
+                processedData[key].max_value = Math.max(processedData[key].max_value, numAnswer);
+                processedData[key].average += numAnswer; // will divide by totalResponses later to get average 
+                processedData[key].answers.push(numAnswer);
             }
             else{
                 processedData[key].answers.push(ans.answer);
@@ -98,11 +117,23 @@ const dataPreProcessing = async (allResponses) => {
             }, 0.0);
             processedData[question].avgRating = total === 0 ? 0 : (accumulatedSum / total).toFixed(2);
         }
+        if(processedData[question].questionType === 'number'){
+            const total = processedData[question].totalResponses;
+            processedData[question].average = total === 0 ? 0 : (processedData[question].average / total).toFixed(2);
+        }
     });
     // add total number of form responses to the processed data
     processedData["totalFormResponses"] = allResponses.length;
     // console.log(processedData);
-    
+    if(context === 'ai'){
+        Object.keys(processedData).forEach((question) => {
+            // for ai context, we dont need the answers array to reduce the data size
+            if(processedData[question].questionType === 'number'){
+                delete processedData[question].answers;
+            }
+        });
+        return processedData;
+    }
     return processedData;
 }
 
@@ -144,6 +175,41 @@ const textQuestionPreProcessing = async (processedData) => {
             // add the word count array to processedData and remove raw answers
             processedData[question].distribution = wordCountArray;
             delete processedData[question].answers;
+        }
+        else if(processedData[question].questionType === 'number'){
+            const binNum = 10; // desired number of bins
+            const binWidth = Math.ceil((processedData[question].max_value - processedData[question].min_value) / binNum);
+            const actualNumBins = Math.ceil((processedData[question].max_value - processedData[question].min_value) / binWidth); // recalculate actual number of bins based on rounded width
+            const  bins = []; // array to hold bin labels
+            for(let i = 0; i < actualNumBins; i++){
+                let binStart = processedData[question].min_value + (i * binWidth);
+                let binEnd = binStart + binWidth - 1;
+                if(i == actualNumBins - 1 && binEnd < processedData[question].max_value){
+                    bins.push(`${binStart} - ${processedData[question].max_value}`);
+                }
+                else{
+                    bins.push(`${binStart} - ${binEnd}`);
+                }
+            }
+            processedData[question].bins = bins;
+            processedData[question].binCounts = new Array(actualNumBins).fill(0);
+            // calculate bin counts
+            processedData[question].answers.forEach((num) => {
+                // determine which bin the number falls into
+                let binIndex = Math.floor((num - processedData[question].min_value) / binWidth);
+        
+                // Handle the maximum value potentially falling exactly on the edge or outside
+                if (num === processedData[question].max_value) {
+                    binIndex = actualNumBins - 1; // Put max value in the last bin
+                } else if (binIndex >= actualNumBins) {
+                    binIndex = actualNumBins - 1; // Should technically not happen if width is calculated correctly, but safety check
+                }
+
+                processedData[question].binCounts[binIndex]++; // increment the count for the appropriate bin
+            });
+            console.log(processedData[question]);
+            
+            delete processedData[question].answers; // remove raw answers as they wont be required in charts
         }
     });
     delete processedData.totalFormResponses; // remove totalFormResponses as it wont be required in charts

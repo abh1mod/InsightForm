@@ -41,6 +41,10 @@ router.get("/:formId/table-structure", async (req, res) => {
                 if(!columns.has(ans.questionText)) columns.add(ans.questionText);
             });
         });
+        // also include all questions from the form in case some questions were never answered
+        resp.questions.forEach((question)=>{
+            if(!columns.has(question.questionText)) columns.add(question.questionText);
+        });
         // convert the Set to an array of objects with header and accessorKey properties for tanstack table
         // both header and accessorKey are same as we are using question text as the key in the row data
         // refer to /raw-data route for how the row data is structured
@@ -101,7 +105,8 @@ router.get("/:formId/raw-data", async (req, res) => {
         // this key-value pair structure allows tanstack table to easily map columns to data, since key names are same as column accessorKeys
         const rowData = userResponses.map((response)=>{
             const row = {
-                createdAt: response.createdAt
+                createdAt: response.createdAt,
+                response_id: response._id
             };
             response.responses.forEach((ans)=>{
                 row[ans.questionText] = ans.answer;
@@ -172,7 +177,7 @@ router.post("/:formId/generate-report", async (req, res) => {
         if(!allResponses || allResponses.length === 0){
             return res.status(400).json({success: false, message: "No responses found for this form"});
         }
-        const preProcessedData = await dataPreProcessing(allResponses);
+        const preProcessedData = await dataPreProcessing(allResponses, 'ai');
         const structuredPrompt = summaryAndSuggestionPrompt(form.objective, preProcessedData);
         // call the AI service with the structured prompt and the expected response schema
         const aiResponse = await generateReport(structuredPrompt, summaryAndSuggestionResponseSchema);
@@ -225,7 +230,7 @@ router.get("/:formId/chart-data", async (req, res) => {
         if(!allResponses || allResponses.length === 0){
             return res.status(400).json({success: false, message: "No responses found for this form"});
         }
-        const preProcessedData = await dataPreProcessing(allResponses);
+        const preProcessedData = await dataPreProcessing(allResponses, 'chart');
         const chartData = await textQuestionPreProcessing(preProcessedData);
         // console.log(chartData);
         
