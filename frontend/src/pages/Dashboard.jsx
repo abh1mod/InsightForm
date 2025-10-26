@@ -1,5 +1,5 @@
 import { useAppContext } from "../context/ContextAPI";
-import { useState, useEffect} from "react";
+import { useState, useEffect, useRef} from "react";
 import NormalLoader from "../components/NormalLoader";
 import { toast } from "react-toastify";
 import axios from "axios";
@@ -15,7 +15,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [formToDelete, setFormToDelete] = useState(null);
-
+  const seenEventKeys = useRef(new Set());
   // This state will hold the 'lastChecked' value at the moment the panel is opened
   const [renderLastChecked, setRenderLastChecked] = useState(lastChecked);
 
@@ -82,6 +82,16 @@ const Dashboard = () => {
     if (token) fetchForms();
   }, [token]);
 
+  const channel = useRef(
+    (() => {
+      try {
+        return new BroadcastChannel("insightform");
+      } catch {
+        return null;
+      }
+    })()
+  );
+
   // Clear notification count when notifications panel is opened
   const handleNotificationToggle = async () => {
     try{
@@ -103,6 +113,34 @@ const Dashboard = () => {
       console.error("Error marking notifications as read:", error);
     }
   };
+
+  useEffect(() => {
+    if (!channel.current) return;
+    const onMessage = (ev) => {
+      const { type, payload } = ev.data || {};
+      const key =
+        payload?.eventId ||
+        `${type}:${payload?.formId || payload?.title || ""}:${payload?.isLive}`;
+      if (key && seenEventKeys.current.has(key)) return;
+      if (key) seenEventKeys.current.add(key);
+      if (type === "FORM_CREATED") {
+        fetchForms();
+      }
+      if (type === "FORM_DELETED") {
+        fetchForms();
+      }
+      if (type === "FORM_STATUS") {
+        setForms((prev) =>
+          prev.map((f) =>
+            f._id === payload.formId ? { ...f, isLive: payload.isLive } : f
+          )
+        );
+      }
+    };
+    channel.current.addEventListener("message", onMessage);
+    return () => channel.current.removeEventListener("message", onMessage);
+  }, []);
+
 
   // Handle form deletion
   const handleDeleteForm = async (formId) => {
@@ -205,7 +243,20 @@ const Dashboard = () => {
         toast.success(
           `Form ${!currentStatus ? "activated" : "deactivated"} successfully`
         );
+        const nextStatus = !currentStatus;
         
+        channel.current &&
+          channel.current.postMessage({
+            type: "FORM_STATUS",
+            payload: { formId, isLive: nextStatus, title },
+          });
+        localStorage.setItem(
+          "insightform:event",
+          JSON.stringify({
+            type: "FORM_STATUS",
+            payload: { formId, isLive: nextStatus, title },
+          })
+        );
       } else {
         if (data.message === "invalid/expired token") {
           toast.error("Your session has expired. Please log in again.");

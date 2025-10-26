@@ -19,6 +19,7 @@ const FormCreate = () => {
 
   // Broadcast util: notify other tabs about created form
   const broadcastCreated = (formId, title) => {
+    
     try {
       const ch = new BroadcastChannel('insightform');
       ch.postMessage({ type: 'FORM_CREATED', payload: { formId, title } });
