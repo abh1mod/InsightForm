@@ -63,7 +63,7 @@ export default function About() {
         
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
             <div className="flex items-start justify-between">
-                <h1 className="text-5xl sm:text-6xl font-extrabold text-indigo-700 dark:text-indigo-400 leading-tight">
+                <h1 className="text-5xl sm:text-6xl font-extrabold text-gray-800 dark:text-indigo-400 leading-tight">
                     <span className='block'>InsightForm:</span> The Future of Data Collection
                 </h1>
                 {/* <button
