@@ -27,7 +27,7 @@ const io = new Server(server, { // Attach Socket.IO to the HTTP server
 app.use(
   cors({
     credentials: true,
-    origin: ["http://localhost:5000"],
+    origin: process.env.FRONTEND_URL || "http://localhost:5000",
   })
 );
 
