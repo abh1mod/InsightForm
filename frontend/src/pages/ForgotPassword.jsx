@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-toastify";
-
+import { API_URL } from "../config/api.js";
 const ForgotPassword = () => {
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
@@ -23,7 +23,7 @@ const ForgotPassword = () => {
 
     try {
       // Using '/auth/forgot-password' endpoint from Login.jsx
-      const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+      // const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
       const res = await axios.post(`${API_URL}/api/auth/forgot-password`, { email });
 
       if (res.data.success) {

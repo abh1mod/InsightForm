@@ -13,6 +13,8 @@ import cors from "cors";
 import { Server } from 'socket.io';
 import { connectDB } from "./services/db.js";
 const app = express();
+app.set("trust proxy", 1);
+// Tell Express to trust proxy headers (important for hosted environments)
 
 const server = http.createServer(app);
 
@@ -27,7 +29,7 @@ const io = new Server(server, { // Attach Socket.IO to the HTTP server
 app.use(
   cors({
     credentials: true,
-    origin: ["http://localhost:5000"],
+    origin: process.env.FRONTEND_URL || "http://localhost:5000",
   })
 );
 

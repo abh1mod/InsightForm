@@ -14,6 +14,7 @@ const router = express.Router();
 import jwtAuthorisation, {blockIfLoggedIn} from "../middleware/jwtAuthorisation.js";
 
 
+const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5000";
 
 // nodemailer configuration for sending emails
 const transporter = nodemailer.createTransport({
@@ -31,7 +32,7 @@ router.use(express.urlencoded({ extended: true }));
 passport.use(new GoogleStrategy({
   clientID: process.env.GOOGLE_CLIENT_ID,
   clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-  callbackURL: 'http://localhost:3000/api/auth/redirect/google',
+  callbackURL: `${process.env.API_URI}/api/auth/redirect/google`,
 }, async function verify(accessToken, refreshToken, profile, done) {
     try {
         console.log(profile);
@@ -116,7 +117,7 @@ router.post("/signup", limiter, blockIfLoggedIn, async (req,res)=>{
         
         // Send verification email
         try{
-            const verificationUrl = `http://localhost:5000/verify/${verificationToken}`; // frontend URL for email verification that would in turn call this route on backend
+            const verificationUrl = `${FRONTEND_URL}/verify/${verificationToken}`; // frontend URL for email verification that would in turn call this route on backend
 
             const mailOptions = {
                 from: process.env.EMAIL_USER,
@@ -196,16 +197,16 @@ router.get('/google', blockIfLoggedIn,
 // If the user is not authenticated, it will return an error
 router.get('/redirect/google', (req, res) => {
     passport.authenticate('google', { session: false }, (err, user, info) => {
-        if(err) return res.redirect('http://localhost:5000/auth/failure?error=server_error');
+        if(err) return res.redirect(`${FRONTEND_URL}/auth/failure?error=server_error`);
         if (!user) {
-            return res.redirect('http://localhost:5000/auth/failure?error=access_denied');
+            return res.redirect(`${FRONTEND_URL}/auth/failure?error=access_denied`);
         }
         try {
             const token = isJWT.sign({id: user._id}, process.env.SECRET_KEY, {expiresIn: '1 days'});
-            return res.redirect(`http://localhost:5000/auth/success?token=${token}`);
+            return res.redirect(`${FRONTEND_URL}/auth/success?token=${token}`);
         } catch (error) {
             console.log(error);
-            return res.redirect('http://localhost:5000/auth/failure?error=token_creation_failed');
+            return res.redirect(`${FRONTEND_URL}/auth/failure?error=token_creation_failed`);
         }
     }) (req, res);
 });
@@ -267,7 +268,7 @@ router.post('/resend-verification', limiter, blockIfLoggedIn, async (req, res) =
         user.verificationEmailAttempts -= 1; // decrement the attempts
         await user.save();
         try{
-            const verificationUrl = `http://localhost:5000/verify/${verificationToken}`;
+            const verificationUrl = `${FRONTEND_URL}/verify/${verificationToken}`;
             const mailOptions = {
                 from: process.env.EMAIL_USER,
                 to: user.email,
@@ -325,7 +326,7 @@ router.post("/forgot-password", limiter, blockIfLoggedIn, async (req, res) => {
         user.passwordResetAttempts -= 1; // decrement the attempts
         await user.save();
         try{
-            const verificationUrl = `http://localhost:5000/reset-password/${token}`;
+            const verificationUrl = `${FRONTEND_URL}/reset-password/${token}`;
             const mailOptions = {
                 from: process.env.EMAIL_USER,
                 to: user.email,

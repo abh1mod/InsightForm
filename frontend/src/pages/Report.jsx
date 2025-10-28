@@ -6,6 +6,7 @@ import { useAppContext } from '../context/ContextAPI';
 import axios from "axios";
 import Bubble from "../components/bubble";
 import {useReactTable, getCoreRowModel, flexRender} from '@tanstack/react-table';
+import { API_URL } from "../config/api.js";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -64,7 +65,7 @@ const Report = () => {
                 setLoading((prev) => {
                     return {...prev, summarySuggestionsLoading: true};
                 });
-                const response = await axios.get(`http://localhost:3000/api/report/${formID}/latest-report`, {
+                const response = await axios.get(`${API_URL}/api/report/${formID}/latest-report`, {
                     headers: {
                         Authorization: `Bearer ${token}`
                     }
@@ -97,7 +98,7 @@ const Report = () => {
 
         const fetchColumns = async () => {
             try{
-                const response = await axios.get(`http://localhost:3000/api/report/${formID}/table-structure`, {
+                const response = await axios.get(`${API_URL}/api/report/${formID}/table-structure`, {
                     headers: {
                         Authorization: `Bearer ${token}`
                     }
@@ -181,7 +182,7 @@ const Report = () => {
                 setLoading((prev) => {
                     return {...prev, chartDataLoading: true};
                 });
-                const response = await axios.get(`http://localhost:3000/api/report/${formID}/chart-data`, {
+                const response = await axios.get(`${API_URL}/api/report/${formID}/chart-data`, {
                     headers: {
                         Authorization: `Bearer ${token}`
                     }
@@ -238,7 +239,7 @@ const Report = () => {
                     return {...prev, rawDataLoading: true};
                 });
                 if(columns.length !== 0){
-                    const response = await axios.get(`http://localhost:3000/api/report/${formID}/raw-data?page=${pagination.pageIndex}&pageSize=${pagination.pageSize}&sortBy=${sorting[0].id}&sortOrder=${sorting[0].desc === true ? "desc" : "asc"}&filter=${filter}`, {
+                    const response = await axios.get(`${API_URL}/api/report/${formID}/raw-data?page=${pagination.pageIndex}&pageSize=${pagination.pageSize}&sortBy=${sorting[0].id}&sortOrder=${sorting[0].desc === true ? "desc" : "asc"}&filter=${filter}`, {
                         headers: {
                             Authorization: `Bearer ${token}`
                         }
@@ -288,7 +289,7 @@ const Report = () => {
             setLoading((prev) => {
                 return {...prev, summarySuggestionsLoading: true};
             });
-            const response = await axios.post(`http://localhost:3000/api/report/${formID}/generate-report`, {}, {
+            const response = await axios.post(`${API_URL}/api/report/${formID}/generate-report`, {}, {
                     headers: {
                         Authorization: `Bearer ${token}`
                     }
@@ -447,7 +448,7 @@ const Report = () => {
     const handleResponseDelete = async (row) => {
         try{
             setDeleteLoading(true);
-            const response = await axios.delete(`http://localhost:3000/api/response/${formID}/response-delete/${row}`, {
+            const response = await axios.delete(`${API_URL}/api/response/${formID}/response-delete/${row}`, {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }
@@ -490,7 +491,7 @@ const Report = () => {
     const downloadData = async () => {
         try{
             setDownloading(true);
-            const response = await axios.get(`http://localhost:3000/api/report/${formID}/download-data`, {
+            const response = await axios.get(`${API_URL}/api/report/${formID}/download-data`, {
                 headers: {
                     Authorization: `Bearer ${token}`,
                 },

@@ -3,6 +3,7 @@ import { useState, useEffect, useRef} from "react";
 import NormalLoader from "../components/NormalLoader";
 import { toast } from "react-toastify";
 import axios from "axios";
+import { API_URL } from "../config/api.js";
 
 const Dashboard = () => {
   const { logout, token, notificationList, unread, lastChecked, setUnread, setLastChecked, tabSeen, setTabSeen, loadingNotifications } = useAppContext();
@@ -36,7 +37,7 @@ const Dashboard = () => {
   const fetchForms = async () => {
     try {
       setLoading(true);
-      const response = await fetch("http://localhost:3000/api/form/userForms", {
+      const response = await fetch(`${API_URL}/api/form/userForms`, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
@@ -100,7 +101,7 @@ const Dashboard = () => {
       if (isOpening) {
         setUnread(0);
       }
-      const response = await axios.patch("http://localhost:3000/api/notification/mark-notifications-read", {}, {
+      const response = await axios.patch(`${API_URL}/api/notification/mark-notifications-read`, {}, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -150,7 +151,7 @@ const Dashboard = () => {
     setFormToDelete(null);
     try {
       const response = await fetch(
-        `http://localhost:3000/api/form/userForms/${formId}`,
+        `${API_URL}/api/form/userForms/${formId}`,
         {
           method: "DELETE",
           headers: {
@@ -211,7 +212,7 @@ const Dashboard = () => {
     );
     try {
       const getRes = await fetch(
-        `http://localhost:3000/api/form/userForms/${formId}`,
+        `${API_URL}/api/form/userForms/${formId}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -228,7 +229,7 @@ const Dashboard = () => {
         isLive: !currentStatus,
       };
       const patchRes = await fetch(
-        `http://localhost:3000/api/form/userForms/${formId}`,
+        `${API_URL}/api/form/userForms/${formId}`,
         {
           method: "PATCH",
           headers: {
