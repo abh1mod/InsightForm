@@ -499,7 +499,7 @@ const FormBuilder = () => {
                 <button
                   onClick={() => {
                     navigator.clipboard.writeText(
-                      `http://localhost:5000/formsubmit/${formID}`
+                      `${window.location.origin}/formsubmit/${formID}`
                     );
                     toast.success("Form link copied to clipboard");
                   }}
