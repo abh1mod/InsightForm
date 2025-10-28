@@ -3,6 +3,7 @@ import axios from 'axios';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/ContextAPI';
+import { API_URL } from '../config/api.js';
 
 const FormCreate = () => {
   const [title, setTitle] = useState('');
@@ -45,7 +46,7 @@ const FormCreate = () => {
     // Here, you would typically navigate away or close the modal
 
     try{
-        const res = await axios.post("http://localhost:3000/api/form/userForms", {
+        const res = await axios.post(`${API_URL}/api/form/userForms`, {
             title : title,
             objective : objective,
         },

@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, useRef } from "react";
 import { toast } from "react-toastify";
 import { socket } from "../socket.js";
+import { API_URL } from "../config/api.js";
 import axios from "axios";
 const Context = createContext();
 
@@ -24,7 +25,7 @@ export const ContextProvider = ({ children }) => {
     const fetchNotifications = async () => {
       try{
         setLoadingNotifications(true);
-        const response = await axios.get("http://localhost:3000/api/notification/get-notifications", {
+        const response = await axios.get(`${API_URL}/api/notification/get-notifications`, {
           headers: {
             Authorization: `Bearer ${token}`
           }

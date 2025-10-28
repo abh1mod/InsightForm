@@ -6,7 +6,7 @@ import { useAppContext } from "../context/ContextAPI";
 import FormNotFound from "./FormNotFound.jsx"
 import SuccessfullSubmission from "./SuccessfullSubmission.jsx"
 import AuthRequired from "./AuthRequired.jsx"
-
+import { API_URL } from "../config/api.js";
 // ⭐ Star Icon and Rating Component
 const StarIcon = ({ className = "" }) => (
   <svg
@@ -98,7 +98,7 @@ useEffect(() => {
   if(!authRequired) return;
   const fetchUser = async () => {
     try {
-      const res = await axios.get("http://localhost:3000/api/auth/me", {
+      const res = await axios.get(`${API_URL}/api/auth/me`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -131,7 +131,7 @@ useEffect(()=>{
 useEffect(() => {
     const fetchFormDetails = async () => {
       try {
-        const routeURL = isPreview ? `http://localhost:3000/api/response/preview/${formID}` : `http://localhost:3000/api/response/viewForms/${formID}`
+        const routeURL = isPreview ? `${API_URL}/api/response/preview/${formID}` : `${API_URL}/api/response/viewForms/${formID}`
         const res = await axios.get(
           routeURL,             {
               headers: {
@@ -200,7 +200,7 @@ useEffect(() => {
 
     try {
       const res = await axios.post(
-        `http://localhost:3000/api/response/submitResponse/${formID}`,
+        `${API_URL}/api/response/submitResponse/${formID}`,
         payload
       );
       if (res.data.success) {

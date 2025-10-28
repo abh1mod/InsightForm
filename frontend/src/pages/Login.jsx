@@ -7,6 +7,7 @@ import LoginComp from "../components/LoginComp";
 import SignUpComp from "../components/SignUpComp";
 import { toast } from 'react-toastify';
 import { Link, useNavigate } from 'react-router-dom'; // Link is needed
+import { API_URL } from "../config/api.js";
 
 const Login = () => {
   const { login, isLoggedIn } = useAppContext();
@@ -59,7 +60,7 @@ const Login = () => {
     setError("");
     
     try {
-      const res = await axios.post("http://localhost:3000/api/auth/login", {
+      const res = await axios.post(`${API_URL}/api/auth/login`, {
         username: loginEmail, // Passport local expects username
         password : loginPassword,
       });
@@ -87,10 +88,10 @@ const Login = () => {
     setError("");
 
     try {
-      const res = await axios.post("http://localhost:3000/api/auth/signup", {
-        name : username,
-        email : signupEmail,
-        password : signupPassword,
+      const res = await axios.post(`${API_URL}/api/auth/signup`, {
+        name: username,
+        email: signupEmail,
+        password: signupPassword,
       });
 
       if (res.data.success) {
@@ -113,7 +114,7 @@ const Login = () => {
   // handleGoogleLogin remains EXACTLY as provided by the user
   const handleGoogleLogin = () => {
     // open backend Google OAuth flow
-    window.location.href = "http://localhost:3000/api/auth/google";
+    window.location.href = `${API_URL}/api/auth/google`;
   };
 
 

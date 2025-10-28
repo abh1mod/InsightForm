@@ -5,6 +5,7 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { useAppContext } from "../context/ContextAPI";
 import { toast } from 'react-toastify';
+import { API_URL } from "../config/api.js";
 
 const VerifyEmail = () =>{
     const { token } = useParams();
@@ -17,7 +18,7 @@ const VerifyEmail = () =>{
         // Call your API to verify the email using the token
         const verifyEmail = async () => {
             try {
-                const res = await axios.get(`http://localhost:3000/api/auth/verify/${token}`);
+                const res = await axios.get(`${API_URL}/api/auth/verify/${token}`);
                 if (res.data.token) {
                     toast.success(res.data.message);
                     console.log(res.data);

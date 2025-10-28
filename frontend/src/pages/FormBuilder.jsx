@@ -8,6 +8,8 @@ import HamsterLoader from "../components/HamsterLoader";
 import { useNavigate } from "react-router-dom";
 import SortableItem from "../components/sortableItem";
 import { Item } from "../components/item";
+import { API_URL } from "../config/api.js";
+
 import {
   DndContext,
   DragOverlay,
@@ -148,7 +150,7 @@ const FormBuilder = () => {
     if (formID) {
       try{
         const fetchFormData = async () => {
-          const res = await axios.get(`http://localhost:3000/api/form/userForms/${formID}`, {
+          const res = await axios.get(`${API_URL}/api/form/userForms/${formID}`, {
             headers: {
               Authorization: `Bearer ${token}`
             }
@@ -182,7 +184,7 @@ const FormBuilder = () => {
       const updateFormData = async () => {
         try {
           const res = await axios.patch(
-            `http://localhost:3000/api/form/userForms/${formID}`,
+            `${API_URL}/api/form/userForms/${formID}`,
             {
               formBody: debouncedFormState,
             },
@@ -307,7 +309,7 @@ const FormBuilder = () => {
     setLoading(true);
     try {
       const res = await axios.get(
-        `http://localhost:3000/api/form/${formID}/suggestQuestions`,
+        `${API_URL}/api/form/${formID}/suggestQuestions`,
         {
           headers: {
             Authorization: `Bearer ${token}`,

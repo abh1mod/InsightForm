@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from "axios"; // Using standard axios import
 import { toast } from 'react-toastify';
+import { API_URL } from '../config/api.js';
 
 const ResendVerification = () => {
   const [email, setEmail] = useState('');
@@ -33,7 +34,7 @@ const ResendVerification = () => {
 
     try {
       // Use the correct, full API endpoint URL
-      const res = await axios.post("http://localhost:3000/api/auth/resend-verification", {
+      const res = await axios.post(`${API_URL}/api/auth/resend-verification`, {
         email: email,
       });
 
