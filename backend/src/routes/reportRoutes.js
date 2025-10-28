@@ -35,24 +35,26 @@ router.get("/:formId/table-structure", async (req, res) => {
         // by going through each response and then through each answer in the response
         // using a Set to store unique question texts
         const columns = new Set();
-        columns.add("createdAt");
+        // also include all questions from the form in case some questions were never answered
+        resp.questions.forEach((question)=>{
+            const key = question.questionText + "_" + question._id;
+            columns.add(key);
+        });
         userResponses.forEach((response)=>{
             response.responses.forEach((ans)=>{
                 const key = ans.questionText + "_" + ans.questionId;
                 if(!columns.has(key)) columns.add(key);
             });
         });
-        // also include all questions from the form in case some questions were never answered
-        resp.questions.forEach((question)=>{
-            const key = question.questionText + "_" + question._id;
-            if(!columns.has(key)) columns.add(key);
-        });
+        
+        var c = [{header: "createdAt", accessorKey: "createdAt"}]; // adding a default column for submission time
         // convert the Set to an array of objects with header and accessorKey properties for tanstack table
         // both header and accessorKey are same as we are using question text as the key in the row data
         // refer to /raw-data route for how the row data is structured
-        const columnHeaders = Array.from(columns).map((col)=>{
+        var headers = Array.from(columns).map((col)=>{
             return {header: col.slice(0, -25), accessorKey: col};
         })
+        var columnHeaders = [...c, ...headers];
         return res.json({success: true, columnHeaders: columnHeaders});
     }
     catch(error){
@@ -260,26 +262,33 @@ router.get("/:formId/download-data", async (req, res) => {
         // structure the data in a way that each row is an object where keys are question texts and values are the answers
         // this structure is suitable for conversion to CSV format
         const allResponses = await Response.find({formId: formId}).select("responses -_id createdAt");
-        const fields = new Set(); // to store unique question texts
-        fields.add("createdAt");
+        // --- 1. Find all Unique Question Versions and Map Keys to Headers ---
+        const uniqueQuestionVersions = new Map(); // Map: uniqueKey -> headerText
+        uniqueQuestionVersions.set('createdAt', 'createdAt'); // Add static column
         form.questions.forEach((question)=>{
-            fields.add(question.questionText);
+            uniqueQuestionVersions.set(`${question._id}_${question.questionText}`, question.questionText);
         });
         const rows = allResponses.map((response) => {
             const rowObj = {};
             rowObj["createdAt"] = response.createdAt;
             response.responses.forEach((ans) => {
-                if(!fields.has(ans.questionText)) fields.add(ans.questionText);
-                rowObj[ans.questionText] = ans.answer;
+                if(!uniqueQuestionVersions.has(`${ans.questionId}_${ans.questionText}`)) uniqueQuestionVersions.set(`${ans.questionId}_${ans.questionText}`, ans.questionText);
+                rowObj[`${ans.questionId}_${ans.questionText}`] = ans.answer;
             });
             return rowObj;
         });
-        console.log(rows);
-        // Convert the Set of fields to an array
-        const headers = Array.from(fields);
+        // --- 2. Prepare Fields for CSV Parser ---
+        const fieldsForParser = [];
+        uniqueQuestionVersions.forEach((headerText, uniqueKey) => {
+            fieldsForParser.push({
+                label: headerText, // The user-friendly column header
+                value: uniqueKey   // The unique key used in the row data
+            });
+        });
+        
         // Convert the JSON data to CSV format
         // using AsyncParser from json2csv for better performance with large datasets
-        const parser = new AsyncParser({ fields: headers });
+        const parser = new AsyncParser({ fields: fieldsForParser });
         const csv = await parser.parse(rows).promise();
         console.log(csv);
         
