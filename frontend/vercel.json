@@ -1,19 +1,5 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "_notes": {
-    "purpose": "Enable SPA-style client-side routing for React Router on Vercel.",
-    "how_it_works": "Any path is rewritten to /index.html so the client app handles routing.",
-    "when_to_use": "Use this when deploying a Vite React SPA without server-side routing.",
-    "env_vars": [
-      "Set VITE_API_URL in Vercel Project Settings > Environment Variables to your backend URL."
-    ],
-    "build": {
-      "root_directory": "frontend",
-      "install_command": "npm ci (default)",
-      "build_command": "npm run build",
-      "output_directory": "dist"
-    }
-  },
   "routes": [
     { "src": "/(.*)", "dest": "/index.html" }
   ]
