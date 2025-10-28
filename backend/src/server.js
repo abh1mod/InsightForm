@@ -13,6 +13,8 @@ import cors from "cors";
 import { Server } from 'socket.io';
 import { connectDB } from "./services/db.js";
 const app = express();
+app.set("trust proxy", 1);
+// Tell Express to trust proxy headers (important for hosted environments)
 
 const server = http.createServer(app);
 
