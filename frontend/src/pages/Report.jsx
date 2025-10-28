@@ -31,8 +31,6 @@ const ratingLabels = ["0.5", "1", "1.5", "2", "2.5", "3", "3.5", "4", "4.5", "5"
 
 const Report = () => {
     const carouselRef = useRef(null);
-    const [deleteLoading, setDeleteLoading] = useState(false);
-    const deleteLoadingRef = useRef(deleteLoading);
     const [refetchFlag, setRefetchFlag] = useState(0);
     const { token, logout } = useAppContext();
     const [newReportLoading, setNewReportLoading] = useState(false);
@@ -58,8 +56,7 @@ const Report = () => {
     useEffect(() => {
         dataRef.current = data;
         paginationRef.current = pagination;
-        deleteLoadingRef.current = deleteLoading;
-    }, [data, pagination, deleteLoading]);
+    }, [data, pagination]);
 
     useEffect(() => {
         const fetchSummarySuggestions = async () => {
@@ -140,8 +137,7 @@ const Report = () => {
                             return (
                                 <button
                                     onClick={()=>handleResponseDelete(row.original.response_id)}
-                                    disabled={deleteLoadingRef.current}
-                                    className="inline-flex items-center gap-2 rounded-md bg-red-600 px-4 py-2 text-white text-sm font-medium hover:bg-red-700 active:bg-red-800 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:bg-red-300 disabled:opacity-75 disabled:cursor-not-allowed"
+                                    className="inline-flex items-center gap-2 rounded-md bg-red-600 px-4 py-2 text-white text-sm font-medium hover:bg-red-700 active:bg-red-800 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
                                     aria-label="Clear filter"
                                     >
                                     Delete
@@ -449,7 +445,6 @@ const Report = () => {
 
     const handleResponseDelete = async (row) => {
         try{
-            setDeleteLoading(true);
             const response = await axios.delete(`${API_URL}/api/response/${formID}/response-delete/${row}`, {
                 headers: {
                     Authorization: `Bearer ${token}`
@@ -484,9 +479,6 @@ const Report = () => {
             else{
                 toast.error("Failed to generate report");
             }
-        }
-        finally{
-            setDeleteLoading(false);
         }
     };
 
