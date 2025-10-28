@@ -38,18 +38,20 @@ router.get("/:formId/table-structure", async (req, res) => {
         columns.add("createdAt");
         userResponses.forEach((response)=>{
             response.responses.forEach((ans)=>{
-                if(!columns.has(ans.questionText)) columns.add(ans.questionText);
+                const key = ans.questionText + "_" + ans.questionId;
+                if(!columns.has(key)) columns.add(key);
             });
         });
         // also include all questions from the form in case some questions were never answered
         resp.questions.forEach((question)=>{
-            if(!columns.has(question.questionText)) columns.add(question.questionText);
+            const key = question.questionText + "_" + question._id;
+            if(!columns.has(key)) columns.add(key);
         });
         // convert the Set to an array of objects with header and accessorKey properties for tanstack table
         // both header and accessorKey are same as we are using question text as the key in the row data
         // refer to /raw-data route for how the row data is structured
         const columnHeaders = Array.from(columns).map((col)=>{
-            return {header: col, accessorKey: col};
+            return {header: col.slice(0, -25), accessorKey: col};
         })
         return res.json({success: true, columnHeaders: columnHeaders});
     }
@@ -109,7 +111,7 @@ router.get("/:formId/raw-data", async (req, res) => {
                 response_id: response._id
             };
             response.responses.forEach((ans)=>{
-                row[ans.questionText] = ans.answer;
+                row[ans.questionText + "_" + ans.questionId] = ans.answer;
             });
             return row;
         });
@@ -177,7 +179,7 @@ router.post("/:formId/generate-report", async (req, res) => {
         if(!allResponses || allResponses.length === 0){
             return res.status(400).json({success: false, message: "No responses found for this form"});
         }
-        const preProcessedData = await dataPreProcessing(allResponses, 'ai');
+        const preProcessedData = await dataPreProcessing(form, allResponses, 'ai');
         const structuredPrompt = summaryAndSuggestionPrompt(form.objective, preProcessedData);
         // call the AI service with the structured prompt and the expected response schema
         const aiResponse = await generateReport(structuredPrompt, summaryAndSuggestionResponseSchema);
@@ -230,7 +232,7 @@ router.get("/:formId/chart-data", async (req, res) => {
         if(!allResponses || allResponses.length === 0){
             return res.status(400).json({success: false, message: "No responses found for this form"});
         }
-        const preProcessedData = await dataPreProcessing(allResponses, 'chart');
+        const preProcessedData = await dataPreProcessing(resp, allResponses, 'chart');
         const chartData = await textQuestionPreProcessing(preProcessedData);
         // console.log(chartData);
         
@@ -260,6 +262,9 @@ router.get("/:formId/download-data", async (req, res) => {
         const allResponses = await Response.find({formId: formId}).select("responses -_id createdAt");
         const fields = new Set(); // to store unique question texts
         fields.add("createdAt");
+        form.questions.forEach((question)=>{
+            fields.add(question.questionText);
+        });
         const rows = allResponses.map((response) => {
             const rowObj = {};
             rowObj["createdAt"] = response.createdAt;
