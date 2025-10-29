@@ -17,6 +17,7 @@ const questionSuggestionPrompt = (objective, neededQuestionData) => {
                     Task:
                     Based on the objective and existing questions, suggest 3 new, relevant, and distinct questions to add to the form.
                     Rating questions should be on a scale of 1 to 5.
+                    questionType can be 'text' for open-ended questions, 'mcq' for multiple-choice questions, 'rating' for rating scale questions and 'number' for numerical input.
         `;
     console.log(text);
     
@@ -99,7 +100,7 @@ const questionSuggestionResponseSchema = {
                     questionType: {
                     type: Type.STRING,
                     description: "The type of question.",
-                    enum: ['text', 'mcq', 'rating'] // Enforce specific values
+                    enum: ['text', 'mcq', 'rating', 'number'] // Enforce specific values
                     },
                     questionText: {
                     type: Type.STRING,
