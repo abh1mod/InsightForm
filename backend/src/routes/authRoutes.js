@@ -17,12 +17,14 @@ import jwtAuthorisation, {blockIfLoggedIn} from "../middleware/jwtAuthorisation.
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5000";
 
 // nodemailer configuration for sending emails
-const transporter = nodemailer.createTransport({
-  service: "gmail",
+let transporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST,
+  port: process.env.SMTP_PORT,
+  secure: false, // true for 465, false for other ports (like 587)
   auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.APP_PASSWORD,
-  },
+    user: process.env.SMTP_USER, // Your Brevo login email
+    pass: process.env.SMTP_PASS  // Your Brevo SMTP key
+  }
 });
 
 router.use(express.json());
