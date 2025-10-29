@@ -47,7 +47,7 @@ router.get("/:formId/table-structure", async (req, res) => {
             });
         });
         
-        var c = [{header: "createdAt", accessorKey: "createdAt"}]; // adding a default column for submission time
+        var c = [{header: "createdAt", accessorKey: "createdAt"}, {header: "User Name", accessorKey: "User Name"}]; // adding a default column for submission time
         // convert the Set to an array of objects with header and accessorKey properties for tanstack table
         // both header and accessorKey are same as we are using question text as the key in the row data
         // refer to /raw-data route for how the row data is structured
@@ -110,7 +110,8 @@ router.get("/:formId/raw-data", async (req, res) => {
         const rowData = userResponses.map((response)=>{
             const row = {
                 createdAt: response.createdAt,
-                response_id: response._id
+                response_id: response._id,
+                "User Name": response.userName
             };
             response.responses.forEach((ans)=>{
                 row[ans.questionText + "_" + ans.questionId] = ans.answer;
@@ -261,16 +262,18 @@ router.get("/:formId/download-data", async (req, res) => {
         // calculate unique question texts to form the headers of the CSV
         // structure the data in a way that each row is an object where keys are question texts and values are the answers
         // this structure is suitable for conversion to CSV format
-        const allResponses = await Response.find({formId: formId}).select("responses -_id createdAt");
+        const allResponses = await Response.find({formId: formId}).sort({createdAt: -1}); // sort by createdAt in descending order
         // --- 1. Find all Unique Question Versions and Map Keys to Headers ---
         const uniqueQuestionVersions = new Map(); // Map: uniqueKey -> headerText
-        uniqueQuestionVersions.set('createdAt', 'createdAt'); // Add static column
+        uniqueQuestionVersions.set('createdAt', 'createdAt'); // Add static column for submission time
+        uniqueQuestionVersions.set('User Name', 'User Name'); // Add static column for user name
         form.questions.forEach((question)=>{
             uniqueQuestionVersions.set(`${question._id}_${question.questionText}`, question.questionText);
         });
         const rows = allResponses.map((response) => {
             const rowObj = {};
             rowObj["createdAt"] = response.createdAt;
+            rowObj["User Name"] = response.userName;
             response.responses.forEach((ans) => {
                 if(!uniqueQuestionVersions.has(`${ans.questionId}_${ans.questionText}`)) uniqueQuestionVersions.set(`${ans.questionId}_${ans.questionText}`, ans.questionText);
                 rowObj[`${ans.questionId}_${ans.questionText}`] = ans.answer;

@@ -101,6 +101,7 @@ router.post("/submitResponse/:formId", limiter, async (req, res) => {
             if(!user){
                 return res.status(404).json({succes: false, message: "User not found"});
             }
+            responseData.userName = user.name;
             notification.userName = user.name;
             // check if there is any record of that user submitting that response in either Response or anonymousSubmission
             const response_userId1 = await Response.findOne({formId: formId, userId: responseData.userId});
@@ -150,6 +151,7 @@ router.post("/submitResponse/:formId", limiter, async (req, res) => {
         const response = new Response({
             formId: formId,
             userId: form.isAnonymous ? null : responseData.userId ? responseData.userId : null,
+            userName: responseData.userName ? responseData.userName : "Anonymous",
             responses: responseData.responses
         });
         session.startTransaction();

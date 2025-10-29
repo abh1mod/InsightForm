@@ -616,25 +616,29 @@ const Report = () => {
                             <h2 className="text-xl font-semibold text-gray-900">Raw Responses</h2>
                             <p className="text-sm text-gray-500">Explore form submissions with filters and sorting</p>
                         </div>
-                        <div className="flex items-center gap-3">
-                            <input
-                                className="w-64 max-w-full rounded-md border border-gray-300 px-3 py-2 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                placeholder="Global filter..."
-                                disabled={searching}
-                                value={filterInput}
-                                onChange={(e) => setFilterInput(e.target.value)}
-                            />
-                            {filter && (
-                                <button
-                                onClick={handleClearFilter}
-                                className="px-2 text-gray-500 hover:text-gray-800"
-                                aria-label="Clear filter"
-                                >
-                                &#x2715; {/* Unicode 'X' symbol */}
-                                </button>
-                            )}
-                            <button disabled={searching} onClick={startFiltering} className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-white text-sm font-medium hover:bg-indigo-700 active:bg-indigo-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:bg-indigo-300 disabled:opacity-75 disabled:cursor-not-allowed">Search</button>
-                            <button disabled={downloading} className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-white text-sm font-medium hover:bg-indigo-700 active:bg-indigo-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:bg-indigo-300 disabled:opacity-75 disabled:cursor-not-allowed" onClick={downloadData}>Export CSV</button>
+                        <div className="flex flex-col items-center gap-3 sm:flex-row">
+                            <div className="w-[15rem]">
+                                <input
+                                    className="w-64 max-w-full rounded-md border border-gray-300 px-3 py-2 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                    placeholder="Global filter..."
+                                    disabled={searching}
+                                    value={filterInput}
+                                    onChange={(e) => setFilterInput(e.target.value)}
+                                />
+                            </div>
+                            <div className="flex items-center sm:justify-around justify-between gap-2 w-[15rem]">
+                                {filter && (
+                                    <button
+                                    onClick={handleClearFilter}
+                                    className="px-2 text-gray-500 hover:text-gray-800"
+                                    aria-label="Clear filter"
+                                    >
+                                    &#x2715; {/* Unicode 'X' symbol */}
+                                    </button>
+                                )}
+                                <button disabled={searching} onClick={startFiltering} className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-white text-sm font-medium hover:bg-indigo-700 active:bg-indigo-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:bg-indigo-300 disabled:opacity-75 disabled:cursor-not-allowed">Search</button>
+                                <button disabled={downloading} className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-white text-sm font-medium hover:bg-indigo-700 active:bg-indigo-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:bg-indigo-300 disabled:opacity-75 disabled:cursor-not-allowed" onClick={downloadData}>Export CSV</button>
+                            </div>
                         </div>
                     </div>
                 </div>

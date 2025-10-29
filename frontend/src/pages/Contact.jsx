@@ -247,7 +247,7 @@ export default function Contact() {
                   <div className="ml-3">
                     <p className="text-sm font-medium 
                                    text-gray-700 dark:text-gray-300">{item.name}</p>
-                    <a href={item.link} className="text-base font-semibold hover:underline 
+                    <a href={item.link} className="sm:text-base text-sm font-semibold hover:underline 
                                                   text-indigo-700 dark:text-indigo-300">
                       {item.value}
                     </a>

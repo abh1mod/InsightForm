@@ -11,6 +11,7 @@ const answerSchema = new mongoose.Schema({
 const ResponseSchema = new mongoose.Schema({
     formId: { type: mongoose.Schema.Types.ObjectId, ref: 'Form', required: true, index: true}, // Reference to the form to which this response belongs
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', index: true}, // Reference to the user who submitted the response
+    userName: { type: String, required: true}, // Name of the user who submitted the response
     responses: [answerSchema], // Array of answers to the questions in the form for a single user
 }, { timestamps: true });
 
