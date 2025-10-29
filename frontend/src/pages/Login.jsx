@@ -103,6 +103,8 @@ const Login = () => {
         if(err.response?.data?.message === "Error sending verification email"){
           setActiveResendLink(true);
         }
+        console.log(err);
+        
       console.error(err.response?.data || err.message);
       setError(err.response?.data?.message || "Signup failed!");
     } finally {

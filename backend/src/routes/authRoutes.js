@@ -134,7 +134,7 @@ router.post("/signup", limiter, blockIfLoggedIn, async (req,res)=>{
         // If error occurs while sending email, return an error
         catch(error){
             console.log(error);
-            return res.status(500).json({success:false, message:"Error sending verification email"});
+            return res.status(500).json({success:false, message:"Error sending verification email", error:error});
         }
 
     }catch(error){
@@ -304,7 +304,7 @@ router.post("/forgot-password", limiter, blockIfLoggedIn, async (req, res) => {
         if(!user) return res.status(400).json({success: false, message: "Error finding mail"});
 
         // check if user has exceeded daily limit for password reset
-        /*if(user.passwordResetAttemptsExpires < Date.now()){
+        if(user.passwordResetAttemptsExpires < Date.now()){
             user.passwordResetAttempts = 5; // reset attempts if expiry time has passed
             user.passwordResetAttemptsExpires = Date.now() + 24*60*60*1000; // set new expiry time for next 24 hours
             await user.save(); // save the updated user document
@@ -319,7 +319,7 @@ router.post("/forgot-password", limiter, blockIfLoggedIn, async (req, res) => {
         const twoMinutes = 2 * 60 * 1000;
         if (user.lastTokenSentAt && (Date.now() - user.lastTokenSentAt.getTime()) < twoMinutes) {
             return res.status(400).json({success: false, message: "Please wait before requesting another password reset email"});
-        }*/
+        }
         
         const token = user.generateResetPasswordToken();
         user.lastTokenSentAt = Date.now(); // update the last sent time
