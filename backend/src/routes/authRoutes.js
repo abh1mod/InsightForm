@@ -10,7 +10,6 @@ import { Strategy as LocalStrategy } from "passport-local";
 import GoogleStrategy from "passport-google-oauth20";
 import isJWT from "jsonwebtoken";
 import crypto from "crypto";
-import nodemailer from "nodemailer";
 const router = express.Router();
 import jwtAuthorisation, {blockIfLoggedIn} from "../middleware/jwtAuthorisation.js";
 
