@@ -14,7 +14,7 @@ const router = express.Router();
 import jwtAuthorisation, {blockIfLoggedIn} from "../middleware/jwtAuthorisation.js";
 
 let emailAPI = new TransactionalEmailsApi();
-emailAPI.authentications.apiKey.apiKey = process.env.SMPT_PASS;
+emailAPI.authentications.apiKey.apiKey = process.env.SMTP_PASS;
 
 
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5000";
@@ -33,7 +33,7 @@ async function sendMyEmail(toEmail, toName, fromEmail, fromName, subject, htmlCo
     console.log('Email sent successfully. API returned:', data);
     return data;
   } catch (error) {
-    console.error('Error sending email:', error.response ? error.response.body : error.message);
+    console.error('Error sending email:', error);
     throw new Error('email failure');
   }
 }
