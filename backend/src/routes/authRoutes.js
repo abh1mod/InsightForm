@@ -1,5 +1,6 @@
 import dotenv from "dotenv";
 dotenv.config();
+import { TransactionalEmailsApi, SendSmtpEmail } from "@getbrevo/brevo";
 import limiter from "../middleware/rateLimiter.js";
 import express from "express"
 import User from "../models/user.model.js";
@@ -13,19 +14,30 @@ import nodemailer from "nodemailer";
 const router = express.Router();
 import jwtAuthorisation, {blockIfLoggedIn} from "../middleware/jwtAuthorisation.js";
 
+let emailAPI = new TransactionalEmailsApi();
+emailAPI.authentications.apiKey.apiKey = process.env.SMPT_PASS;
+
 
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5000";
 
-// nodemailer configuration for sending emails
-let transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: process.env.SMTP_PORT,
-  secure: false, // true for 465, false for other ports (like 587)
-  auth: {
-    user: process.env.SMTP_USER, // Your Brevo login email
-    pass: process.env.SMTP_PASS  // Your Brevo SMTP key
+async function sendMyEmail(toEmail, toName, fromEmail, fromName, subject, htmlContent) {
+
+  const message = new SendSmtpEmail(); // Create the email object
+
+  message.subject = subject;
+  message.htmlContent = htmlContent;
+  message.sender = { email: fromEmail, name: fromName };
+  message.to = [{ email: toEmail, name: toName }];
+
+  try {
+    const data = await emailAPI.sendTransacEmail(message);
+    console.log('Email sent successfully. API returned:', data);
+    return data;
+  } catch (error) {
+    console.error('Error sending email:', error.response ? error.response.body : error.message);
+    throw new Error('email failure');
   }
-});
+}
 
 router.use(express.json());
 router.use(express.urlencoded({ extended: true }));
@@ -120,16 +132,8 @@ router.post("/signup", limiter, blockIfLoggedIn, async (req,res)=>{
         // Send verification email
         try{
             const verificationUrl = `${FRONTEND_URL}/verify/${verificationToken}`; // frontend URL for email verification that would in turn call this route on backend
-
-            const mailOptions = {
-                from: process.env.EMAIL_USER,
-                to: newUser.email,
-                subject: 'Email Verification',
-                html: `<p>Please click the following link to verify your email, link is valid for 15 minutes:</p>
-                    <a href="${verificationUrl}">verification url</a>`
-            };
-
-            await transporter.sendMail(mailOptions);
+            await sendMyEmail(newUser.email, newUser.name, process.env.EMAIL_USER, "InsightForm", 'Email Verification', `<p>Please click the following link to verify your email, link is valid for 15 minutes:</p>
+                <a href="${verificationUrl}">verification url</a>`);
 
             return res.status(201).json({success:true, message:"Please check your email to verify your account."});
         }
@@ -271,24 +275,18 @@ router.post('/resend-verification', limiter, blockIfLoggedIn, async (req, res) =
         await user.save();
         try{
             const verificationUrl = `${FRONTEND_URL}/verify/${verificationToken}`;
-            const mailOptions = {
-                from: process.env.EMAIL_USER,
-                to: user.email,
-                subject: 'Email Verification',
-                html: `<p>Please click the following link to verify your email:</p>
-                    <a href="${verificationUrl}">verification url</a>`
-            };
-            await transporter.sendMail(mailOptions);
+            await sendMyEmail(user.email, user.name, process.env.EMAIL_USER, "InsightForm", 'Email Verification', `<p>Please click the following link to verify your email, link is valid for 15 minutes:</p>
+                <a href="${verificationUrl}">verification url</a>`);
             return res.status(200).json({success:true, message:"Verification email resent. Please check your email."});
         }
         catch(error){
             console.log(error);
-            return res.status(500).json({success:false, message:"Server Error"});
+            return res.status(500).json({success:false, message:"Error sending verification email"});
         }
     }
     catch(error){
         console.log(error);
-        return res.status(500).json({success:false, message:"Error resending verification email"});
+        return res.status(500).json({success:false, message:"server Error"});
     }
 });
 
@@ -329,14 +327,8 @@ router.post("/forgot-password", limiter, blockIfLoggedIn, async (req, res) => {
         await user.save();
         try{
             const verificationUrl = `${FRONTEND_URL}/reset-password/${token}`;
-            const mailOptions = {
-                from: process.env.EMAIL_USER,
-                to: user.email,
-                subject: 'Password Reset',
-                html: `<p>Please click the following link to reset your password:</p>
-                    <a href="${verificationUrl}">Reset Password</a>`
-            };
-            await transporter.sendMail(mailOptions);
+            await sendMyEmail(user.email, user.name, process.env.EMAIL_USER, "InsightForm", 'Password Reset', `<p>Please click the following link to reset your password, link is valid for 15 minutes:</p>
+                <a href="${verificationUrl}">reset password url</a>`);
             return res.status(200).json({success:true, message:"Password Reset link sent. Please check your email."});
         }
         catch(error){
