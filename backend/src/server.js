@@ -18,9 +18,16 @@ app.set("trust proxy", 1);
 
 const server = http.createServer(app);
 
+const allowedOrigins = [
+    "https://www.insightform.live",
+    "https://insightform.live",
+    "https://insightform.netlify.app",
+    "http://localhost:5000"
+];
+
 const io = new Server(server, { // Attach Socket.IO to the HTTP server
     cors: {
-        origin: process.env.FRONTEND_URL || "http://localhost:5000", // Allow your frontend
+        origin: allowedOrigins, // Allow your frontend
         methods: ["GET", "POST"]
     }
 });
@@ -29,7 +36,7 @@ const io = new Server(server, { // Attach Socket.IO to the HTTP server
 app.use(
   cors({
     credentials: true,
-    origin: process.env.FRONTEND_URL || "http://localhost:5000",
+    origin: allowedOrigins,
   })
 );
 

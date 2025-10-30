@@ -115,9 +115,10 @@ const Login = () => {
 
   // handleGoogleLogin remains EXACTLY as provided by the user
   const handleGoogleLogin = () => {
-    // open backend Google OAuth flow
-    window.location.href = `${API_URL}/api/auth/google`;
+    const frontendOrigin = window.location.origin;
+    window.location.href = `${API_URL}/api/auth/google?origin=${encodeURIComponent(frontendOrigin)}`;
   };
+
 
 
   return (

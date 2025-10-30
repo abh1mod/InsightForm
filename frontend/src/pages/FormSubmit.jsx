@@ -7,6 +7,10 @@ import FormNotFound from "./FormNotFound.jsx"
 import SuccessfullSubmission from "./SuccessfullSubmission.jsx"
 import AuthRequired from "./AuthRequired.jsx"
 import { API_URL } from "../config/api.js";
+import Loader from "../components/Loader.jsx";
+import HamsterLoader from "../components/HamsterLoader.jsx";
+
+
 // ⭐ Star Icon and Rating Component
 const StarIcon = ({ className = "" }) => (
   <svg
@@ -92,7 +96,7 @@ const FormSubmit = () => {
   const [authRequired, setAuthRequired] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [showSubmit, setShowSubmitSuccess] = useState(false);
-
+  const [submissionUnderProcess, setSubmissionUnderProcess] = useState(false);
 
 useEffect(() => {
   if(!authRequired) return;
@@ -174,7 +178,7 @@ useEffect(() => {
   // Handle submit
   const handleSubmit = async (e) => {
     e.preventDefault();
-
+    setSubmissionUnderProcess(true);
     // Validate required questions
     for (const q of form.questions) {
       const ans = responses[q._id];
@@ -213,6 +217,9 @@ useEffect(() => {
     } catch (err) {
       toast.error(err.response?.data?.message || "Submission failed");
     }
+    finally{
+      setSubmissionUnderProcess(false);
+    }
   };
 
   if (loading)
@@ -228,13 +235,20 @@ useEffect(() => {
     if(showSubmit){
       return <SuccessfullSubmission/>
     }
+    // if(submissionUnderProcess){
+    //   return <Loader/>
+    // }
 
   return (
     
 
     <>
-  {  (authRequired && !isLoggedIn) ?     <AuthRequired/> :
+  {  (authRequired && !isLoggedIn) ?     <AuthRequired/> : 
+
     <div className="flex justify-center items-start bg-gray-50 p-6 sm:p-4 min-h-screen">
+        {submissionUnderProcess && (  
+            <Loader />       
+        )}
       <div className="flex flex-col w-full max-w-3xl space-y-6">
 
         <div className="bg-white p-8 rounded-xl shadow-md border-l-4 border-blue-500">

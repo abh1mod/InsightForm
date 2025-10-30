@@ -17,7 +17,7 @@ let emailAPI = new TransactionalEmailsApi();
 emailAPI.authentications.apiKey.apiKey = process.env.SMTP_PASS;
 
 
-const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5000";
+// const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5000";
 
 async function sendMyEmail(toEmail, toName, fromEmail, fromName, subject, htmlContent) {
 
@@ -114,6 +114,7 @@ passport.use(new LocalStrategy(async function verify(username, password, cb) {
 router.post("/signup", limiter, blockIfLoggedIn, async (req,res)=>{
     try{
         const {email, password, name} = req.body;
+        const FRONTEND_URL = req.get('origin');
         if(!email || !password || !name){
             // If any field is missing, return an error
             return res.status(400).json({success:false, message:"Please Provide all Fields"});
@@ -186,12 +187,14 @@ router.post("/login", limiter, blockIfLoggedIn, (req, res) => {
 
 // frontend will redirect to this route to initiate Google authentication
 // This will redirect the user to Google's OAuth 2.0 server
-router.get('/google', blockIfLoggedIn, 
-  passport.authenticate('google', {
-        scope: [ 'profile','email' ],
-        session: false // Disable session support
-    }
-));
+router.get('/google', blockIfLoggedIn, (req, res, next) => {
+    const origin = req.query.origin || process.env.FRONTEND_URL;
+    passport.authenticate('google', {
+        scope: ['profile', 'email'],
+        state: encodeURIComponent(origin), // pass it safely to callback
+        session: false
+    })(req, res, next);
+});
 
 // This is the callback route that Google will redirect to after authentication
 // after coming to this route, passport will exchange the authorization code for access token and fetch the user profile from Google
@@ -201,6 +204,7 @@ router.get('/google', blockIfLoggedIn,
 // If the user is authenticated successfully, it will return a token
 // If the user is not authenticated, it will return an error
 router.get('/redirect/google', (req, res) => {
+    const FRONTEND_URL = decodeURIComponent(req.query.state);
     passport.authenticate('google', { session: false }, (err, user, info) => {
         if(err) return res.redirect(`${FRONTEND_URL}/auth/failure?error=server_error`);
         if (!user) {
@@ -247,6 +251,7 @@ router.get('/verify/:token', blockIfLoggedIn, async (req, res) => {
 router.post('/resend-verification', limiter, blockIfLoggedIn, async (req, res) => {
     try{
         const {email} = req.body;
+        const FRONTEND_URL = req.get('origin');
         if(!email) return res.status(400).json({success: false, message: "Please provide an email"});
         let user = await User.findOne({email: email, isVerified: false});
         if(!user) return res.status(400).json({success: false, message: "Error finding mail"});
@@ -298,6 +303,8 @@ router.post('/resend-verification', limiter, blockIfLoggedIn, async (req, res) =
 router.post("/forgot-password", limiter, blockIfLoggedIn, async (req, res) => {
     try{
         const email = req.body.email;
+        const FRONTEND_URL = req.get('origin');
+        console.log(FRONTEND_URL);
         if(!email) return res.status(400).json({success: false, message: "Please provide an email"});
         const user = await User.findOne({email: email});
         if(!user) return res.status(400).json({success: false, message: "Error finding mail"});
