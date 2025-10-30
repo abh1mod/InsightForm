@@ -22,8 +22,7 @@ const allowedOrigins = [
     "https://www.insightform.live",
     "https://insightform.live",
     "https://insightform.netlify.app",
-    "http://localhost:5000",
-    "https://insight-form-black.vercel.app"
+    "http://localhost:5000"
 ];
 
 const io = new Server(server, { // Attach Socket.IO to the HTTP server
