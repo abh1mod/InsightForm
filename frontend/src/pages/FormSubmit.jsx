@@ -147,9 +147,11 @@ useEffect(() => {
           setAuthRequired(res.data.form.authRequired);
           setForm(res.data.form);
         } else {
+          console.log(res)
           console.log(res.data.message || "Form not found");
         }
       } catch (error) {
+        console.log(error);
         console.log(error.response?.data?.message || "Error loading form");
           if(error.response){
                     if(error.response.data.message === "invalid/expired token" && token){
@@ -243,9 +245,6 @@ useEffect(() => {
     if(showSubmit){
       return <SuccessfullSubmission/>
     }
-    // if(submissionUnderProcess){
-    //   return <Loader/>
-    // }
 
   return (
     
