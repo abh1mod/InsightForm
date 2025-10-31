@@ -112,9 +112,15 @@ const questionSuggestionResponseSchema = {
                     items: {
                         type: Type.STRING
                         }
+                    },
+                    min: {
+                        type: Type.NUMBER
+                    },
+                    max: {
+                        type: Type.NUMBER
                     }
                 },
-                required: ["questionType", "questionText", "options"]
+                required: ["questionType", "questionText", "options", "min", "max"]
                 }
             }
             },

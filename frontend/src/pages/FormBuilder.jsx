@@ -347,6 +347,9 @@ const FormBuilder = () => {
 
       if (res.data.success) {
         toast.success("Questions Loaded Successfully");
+        for(let i = 0; i < res.data.suggestions.length; i++){
+          res.data.suggestions[i].id = `q_${Date.now()}_${i}_${Math.random().toString(36).substr(2, 9)}`;
+        }
         setQuestions((prev) => [...prev, ...res.data.suggestions]);
         
         // Scroll to bottom after generating questions
