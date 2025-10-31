@@ -169,12 +169,26 @@ useEffect(() => {
     fetchFormDetails();
   }, [formID]);
 
+  const [error, setError] = useState({});
+  // This function can be inside your FormBuilder component
+  const validateNumberRange = (min, max, value, questionId) => {
+      // Convert empty strings to null for easier checking
+      if (value < min || value > max) {
+        setError((prev) => ({ ...prev, [questionId]: `Please provide a number between ${min} and ${max}.` }));
+        return; // Error found
+      }
+      setError((prev) => ({ ...prev, [questionId]: "" }));
+      return; // No error, validation passes
+  };
  
-  const handleChange = (questionId, value) => {
+  const handleChange = (questionId, value, index) => {
     setResponses((prev) => ({
       ...prev,
       [questionId]: value,
     }));
+    if(form.questions[index].questionType === "number" && form.questions[index]._id === questionId){
+      validateNumberRange(form.questions[index].min, form.questions[index].max, value, questionId);
+    }
   };
 
   // Handle submit
@@ -286,22 +300,24 @@ useEffect(() => {
                   placeholder="Your answer..."
                   className="mt-4 w-full border border-gray-300 rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y min-h-[80px]"
                   value={responses[q._id] || ""}
-                  onChange={(e) => handleChange(q._id, e.target.value)}
+                  onChange={(e) => handleChange(q._id, e.target.value, index)}
                 />
               )}
 
               {/* Number */}
               {q.questionType === "number" && (
-                <input
-                  type="number"
-                  disabled={isPreview}
-                  placeholder="Your answer..."
-                  className="mt-4 w-full border border-gray-300 rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y min-h-[80px]"
-                  value={responses[q._id] || ""}
-                  onChange={(e) => handleChange(q._id, e.target.value)}
-                />
+                <div>
+                  <input
+                    type="number"
+                    disabled={isPreview}
+                    placeholder="Your answer..."
+                    className="mt-4 w-full border border-gray-300 rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y min-h-[80px]"
+                    value={responses[q._id] || ""}
+                    onChange={(e) => handleChange(q._id, e.target.value, index)}
+                  />
+                  {error[q._id] && <div className="text-red-500 text-sm mt-1">{error[q._id]}</div>}
+                </div>
               )}
-
               {/* MCQ */}
               {q.questionType === "mcq" && (
                 <div>
@@ -317,7 +333,7 @@ useEffect(() => {
                         name={`question-${index}`}
                         value={opt}
                         checked={responses[q._id] === opt}
-                        onChange={(e) => handleChange(q._id, e.target.value)}
+                        onChange={(e) => handleChange(q._id, e.target.value, index)}
                         className="text-blue-600 focus:ring-blue-500"
                         required={q.required}
                       />
@@ -331,7 +347,7 @@ useEffect(() => {
                   className="text-sm text-gray-500 mt-2 ml-6 block hover:text-gray-700 underline pointer cursor-pointer"
                   onClick={() => {
                     if (isPreview) return;
-                    handleChange(q._id, "");
+                    handleChange(q._id, "", index);
                   }}
                 >
                   Clear
@@ -348,7 +364,7 @@ useEffect(() => {
                 <div className="mt-4">
                   <StarRating
                     rating={responses[q._id] || 0}
-                    onRatingChange={(val) => handleChange(q._id, val)}
+                    onRatingChange={(val) => handleChange(q._id, val, index)}
                     disabled={isPreview}
                   />
                 </div>
@@ -357,7 +373,7 @@ useEffect(() => {
                   className="text-sm text-gray-500 mt-2 md:mt-4 block hover:text-gray-700 underline pointer cursor-pointer"
                   onClick={() => {
                     if (isPreview) return;
-                    handleChange(q._id, "");
+                    handleChange(q._id, "", index);
                   }}
                 >
                   Clear
