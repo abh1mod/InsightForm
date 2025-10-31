@@ -181,6 +181,32 @@ const FormBuilder = () => {
 
   useEffect(() => {
     if (debouncedFormState) {
+      let isValid = true;
+      questions.forEach((q) => {
+        if(q.questionType === 'number'){
+          const minVal = (q.min === '' || q.min === null) ? null : parseFloat(q.min);
+          const maxVal = (q.max === '' || q.max === null) ? null : parseFloat(q.max);
+
+          if (minVal === null || maxVal === null) {
+              isValid = false;
+              return false;
+          }
+
+          if (isNaN(minVal) || isNaN(maxVal)) {
+              isValid = false;
+              return false;
+          }
+
+          if (maxVal < minVal) {
+              isValid = false;
+              return false;
+          }
+        }
+      });
+      if (!isValid) {
+        console.log("Form data invalid, skipping auto-save.");
+        return;
+      }
       const updateFormData = async () => {
         try {
           const res = await axios.patch(
@@ -292,6 +318,8 @@ const FormBuilder = () => {
       questionType: type,
       questionText: `New Question`,
       options: [],
+      min: type === "number" ? -1000 : null,
+      max: type === "number" ? 1000 : null,
       required: false,
     };
     setQuestions([...questions, newQuestion]);

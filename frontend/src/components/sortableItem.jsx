@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useState, useEffect} from 'react';
 import {useSortable} from '@dnd-kit/sortable';
 import {CSS} from '@dnd-kit/utilities';
 import AutoResizeTextarea from "../components/AutoResizeTextarea";
@@ -23,6 +23,8 @@ import {
   ChevronUpIcon,
 } from "@heroicons/react/24/outline";
 
+
+
 function SortableItem(props) {
     const {
         attributes,
@@ -32,6 +34,7 @@ function SortableItem(props) {
         transition,
         isDragging,
     } = useSortable({id: props.question.id});
+    const [error, setError] = useState("");
     
     const style = {
         transform: CSS.Transform.toString(transform),
@@ -68,6 +71,43 @@ function SortableItem(props) {
     );
     props.setQuestions(newQuestions);
   };
+
+  // This function can be inside your FormBuilder component
+  const validateNumberRange = (min, max) => {
+      // Convert empty strings to null for easier checking
+      const minVal = (min === '' || min === null) ? null : parseFloat(min);
+      const maxVal = (max === '' || max === null) ? null : parseFloat(max);
+
+      if (minVal === null || maxVal === null) {
+          setError("Minimum and Maximum values are required.");
+          return false;
+      }
+
+      if (isNaN(minVal) || isNaN(maxVal)) {
+          setError("Values must be valid numbers.");
+          return false;
+      }
+
+      if (maxVal < minVal) {
+          setError("Maximum value must be greater than the minimum value.");
+          return false;
+      }
+      setError("");
+      return true; // No error, validation passes
+  };
+  
+  const handleMinMaxChange = (qIndex, field, newValue) => {
+    
+    const newQuestions = [...props.questions];
+    newQuestions[qIndex][field] = newValue;
+    
+    // 1. Validate the new min/max values
+    validateNumberRange(
+      newQuestions[qIndex].min,
+      newQuestions[qIndex].max
+    );
+    props.setQuestions(newQuestions);
+  }
 
   const removeOptionFromQuestion = (qIndex, oIndex) => {
     const newQuestions = [...props.questions];
@@ -202,6 +242,21 @@ function SortableItem(props) {
                 disabled
                 className="w-full p-2 border-b border-gray-200 rounded-md bg-gray-50 text-gray-500 italic"
                 />
+                <input
+                type="number"
+                value={props.question.min}
+                onChange={(event) => handleMinMaxChange(props.index, 'min', event.target.value)}
+                placeholder="min"
+                className="w-full p-2 border-b border-gray-200 rounded-md bg-gray-50 text-gray-500 italic"
+                />
+                <input
+                type="number"
+                value={props.question.max}
+                onChange={(event) => handleMinMaxChange(props.index, 'max', event.target.value)}
+                placeholder="max"
+                className="w-full p-2 border-b border-gray-200 rounded-md bg-gray-50 text-gray-500 italic"
+                />
+                {error && <div className="text-red-500 text-sm mt-1">{error}</div>}
             </div>
             )}
             <div className="p-6 flex items-center justify-center" {...listeners}>

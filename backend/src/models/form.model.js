@@ -15,6 +15,34 @@ const QuestionSchema = new mongoose.Schema({
   questionText: { type: String, required: true }, // The text of the question
   required: { type: Boolean, default: false }, // Whether the question is mandatory
   options: [String], // applicable for MCQ, checkboxes, dropdown otherwise empty
+  min: {
+    type: Number,
+    // 'this' refers to the document being validated
+    required: [
+      function() { return this.questionType === 'number'; },
+      'Minimum value is required for number-based questions'
+    ],
+    default: null
+  },
+  max: {
+    type: Number,
+    required: [
+      function() { return this.questionType === 'number'; },
+      'Maximum value is required for number-based questions'
+    ],
+    default: null,
+    // You can also add validation to ensure max is greater than min
+    validate: [
+      function(value) {
+        // Only run validation if both values are present
+        if (this.questionType === 'number' && this.min !== null && value !== null) {
+          return value > this.min;
+        }
+        return true; // Pass validation if not a number question or values are missing
+      },
+      'Maximum value must be greater than the minimum value'
+    ]
+  }
 }); 
 
 

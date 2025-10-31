@@ -184,6 +184,12 @@ useEffect(() => {
       const ans = responses[q._id];
       if (q.required && (!ans || ans === "")) {
         toast.error(`Please answer: "${q.questionText}"`);
+        setSubmissionUnderProcess(false);
+        return;
+      }
+      if(q.questionType === "number" && ans && (ans < q.min || ans > q.max)){
+        toast.error(`Please provide a number between ${q.min} and ${q.max} for: "${q.questionText}"`);
+        setSubmissionUnderProcess(false);
         return;
       }
     }
@@ -197,6 +203,8 @@ useEffect(() => {
           questionType: q.questionType,
           options: q.questionType === "mcq" ? q.options : [],
           answer: String(responses[q._id] || ""),
+          min: q.questionType === "number" ? q.min : null,
+          max: q.questionType === "number" ? q.max : null,
         })),
       },
     };  

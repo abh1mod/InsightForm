@@ -12,19 +12,14 @@ const router = express.Router();
 router.use(express.json());
 router.use(express.urlencoded({ extended: true }));
 
-function isNumberBetween1And5(str) {
+function isNumberBetweenXAndY(str, x, y) {
   // 1. Convert the string to a number
   const num = Number(str);
 
   // 2. Check if it's a valid number and within the range
   //    - !isNaN(num) checks if the string was a number at all.
   //    - num >= 1 && num <= 5 checks the range.
-  return !isNaN(num) && num > 0 && num <= 5;
-}
-
-function isNumber(str){
-    const num = Number(str);
-    return !isNaN(num);
+  return !isNaN(num) && num >= x && num <= y;
 }
 
 // This route allows users to view a specific form by its ID.
@@ -136,10 +131,10 @@ router.post("/submitResponse/:formId", limiter, async (req, res) => {
             if(answer.questionType === "mcq" && !question.options.includes(answer.answer)){
                 return res.status(400).json({success: false, message: 'not correct response', questionId: answer.questionId});
             }
-            else if(answer.questionType === "rating" && isNumberBetween1And5(answer.answer) === false){
+            else if(answer.questionType === "rating" && isNumberBetweenXAndY(answer.answer, 0.5, 5) === false){
                 return res.status(400).json({success: false, message: 'not correct response', questionId: answer.questionId});
             }
-            else if(answer.questionType === "number" && isNumber(answer.answer) === false){
+            else if(answer.questionType === "number" && isNumberBetweenXAndY(answer.answer, answer.min, answer.max) === false){
                 return res.status(400).json({success: false, message: 'not correct response', questionId: answer.questionId});
             }
             else if(answer.questionType === "text" && answerText.length === 0){
