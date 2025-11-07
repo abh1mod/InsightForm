@@ -97,6 +97,9 @@ const Report = () => {
 
         const fetchColumns = async () => {
             try{
+                setLoading((prev) => {
+                    return {...prev, rawDataLoading: true};
+                });
                 const response = await axios.get(`${API_URL}/api/report/${formID}/table-structure`, {
                     headers: {
                         Authorization: `Bearer ${token}`
