@@ -201,6 +201,9 @@ const Report = () => {
                         toast.error("Session expired. Please log in again.");
                         logout();
                     }
+                    else if(error.response.data.message === "No responses found for this form"){
+                        setChartData([]);
+                    }
                     else{
                         toast.error(error.response.data.message || "Failed to fetch chart data");
                     }
@@ -455,15 +458,19 @@ const Report = () => {
             });
             if(response.data.success){
                 toast.success(response.data.message || "Response deleted successfully");
-                console.log(data.length);
-                console.log(pagination.pageIndex);
+                // console.log(data.length);
+                // console.log(pagination.pageIndex);
                 
                 if(dataRef.current.length === 1 && paginationRef.current.pageIndex > 0){
+                    // console.log("if block");
+                    
                     setPagination((prev) => {
                         return {...prev, pageIndex: prev.pageIndex - 1};
                     });
                 }
                 else{
+                    // console.log("else block");
+                    
                     setRefetchFlag((prev) => prev + 1);
                 }
             }
